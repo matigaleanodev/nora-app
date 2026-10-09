@@ -1,0 +1,53 @@
+# Más información: https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# Dependencias
+node_modules/
+
+# Expo
+.expo/
+dist/
+expo-env.d.ts
+
+# Archivos nativos
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Depuración
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# Variables de entorno locales
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Carpetas nativas generadas
+/ios
+/android
+
+# Generado por withTailwind de @ng-native/tailwind en cada inicio de Metro
+.angular-native/
+
+# Instrucciones locales y planificación activa
+/agents.md
+/AGENTS.md
+/agents.es.md
+/AGENTS.es.md
+/CLAUDE.md
+/roadmap.md
+/Roadmap.md
+/roadmap.es.md
