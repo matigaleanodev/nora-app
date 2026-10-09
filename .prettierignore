@@ -1,0 +1,15 @@
+node_modules/
+.angular-native/
+.expo/
+dist/
+build/
+coverage/
+android/
+ios/
+package-lock.json
+expo-env.d.ts
+*.tsbuildinfo
+agents.md
+AGENTS.md
+CLAUDE.md
+roadmap.md

@@ -1,0 +1,49 @@
+{
+  "name": "nora-app",
+  "version": "1.0.0",
+  "license": "MIT",
+  "main": "src/main.ts",
+  "dependencies": {
+    "@angular/common": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@ng-icons/bootstrap-icons": "^36.1.0",
+    "@ng-icons/core": "^36.1.0",
+    "@ng-native/components": "0.7.0",
+    "@ng-native/device": "0.7.0",
+    "@ng-native/fabric": "0.7.0",
+    "@ng-native/icons": "^0.7.0",
+    "@ng-native/metro": "0.7.0",
+    "@ng-native/platform": "0.7.0",
+    "@ng-native/tailwind": "^0.7.0",
+    "@react-native-community/datetimepicker": "9.1.0",
+    "@tailwindcss/cli": "^4.3.3",
+    "expo": "~57.0.26",
+    "expo-crypto": "~57.0.3",
+    "expo-sqlite": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-svg": "15.15.4",
+    "tailwindcss": "^4.3.3"
+  },
+  "devDependencies": {
+    "@angular/compiler-cli": "^22.0.0",
+    "@babel/core": "^7.29.7",
+    "@ng-native/testing": "0.7.0",
+    "@types/react": "~19.2.2",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.0"
+  },
+  "scripts": {
+    "start": "expo start --go --tunnel",
+    "android": "expo start --android",
+    "typecheck": "node metro.config.js && ngc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
+  },
+  "private": true
+}
