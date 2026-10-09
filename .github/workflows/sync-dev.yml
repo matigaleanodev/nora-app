@@ -1,0 +1,30 @@
+name: Auto sync main to dev
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-dev-from-main-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  sync-dev:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Obtener historial completo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.DEV_SYNC_PAT || github.token }}
+      - name: Configurar identidad Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Sincronizar main hacia dev
+        run: bash .github/scripts/sync-dev.sh
