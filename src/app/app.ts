@@ -1,3 +1,6 @@
+import { BusinessPageComponent } from "./business/pages/business-page.component";
+import { BusinessPageService } from "./business/services/business-page.service";
+import { IconComponent } from "./shared/components/icon/icon.component";
 import { Component, inject, signal } from "@angular/core";
 import {
   Pressable,
@@ -20,6 +23,8 @@ type Tab = "customers" | "home" | "estimates";
 @Component({
   imports: [
     Pressable,
+    IconComponent,
+    BusinessPageComponent,
     SafeAreaProvider,
     SafeAreaView,
     ScrollView,
@@ -43,59 +48,74 @@ type Tab = "customers" | "home" | "estimates";
             >
             <text class="brand-name">nora</text>
           </view>
-          <text class="local-badge">EN TU TELÉFONO</text>
+          <pressable
+            class="header-settings items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel="Mi negocio"
+            [disabled]="business.visible()"
+            (press)="business.open()"
+          >
+            <nora-icon name="bootstrapGear" [size]="24" />
+          </pressable>
         </view>
         <view class="flex-1">
-          @switch (tab()) {
-            @case ("home") {
-              <scroll-view
-                class="flex-1"
-                [contentContainerStyle]="{
-                  padding: 24,
-                  paddingTop: 12,
-                  paddingBottom: 28,
-                }"
-                ><nora-home
-              /></scroll-view>
-            }
-            @case ("customers") {
-              <nora-customers />
-            }
-            @case ("estimates") {
-              <nora-estimates />
+          @if (business.visible()) {
+            <nora-business />
+          } @else {
+            @switch (tab()) {
+              @case ("home") {
+                <scroll-view
+                  class="flex-1"
+                  [contentContainerStyle]="{
+                    padding: 24,
+                    paddingTop: 12,
+                    paddingBottom: 28,
+                  }"
+                  ><nora-home
+                /></scroll-view>
+              }
+              @case ("customers") {
+                <nora-customers />
+              }
+              @case ("estimates") {
+                <nora-estimates />
+              }
             }
           }
         </view>
         <nora-toast />
-        <view class="tab-bar flex-row items-center px-3 py-2">
-          @for (item of tabs; track item.id) {
-            <pressable
-              accessibilityRole="tab"
-              [accessibilityLabel]="item.label"
-              [accessibilityState]="{ selected: tab() === item.id }"
-              (press)="tab.set(item.id)"
-              class="tab-item flex-1 items-center justify-center gap-1"
-              [class.tab-item-active]="tab() === item.id"
-            >
-              <text
-                class="tab-symbol"
-                [class.tab-text-active]="tab() === item.id"
-                >{{ item.symbol }}</text
+        @if (!business.visible()) {
+          <view class="tab-bar flex-row items-center px-3 py-2">
+            @for (item of tabs; track item.id) {
+              <pressable
+                accessibilityRole="tab"
+                [accessibilityLabel]="item.label"
+                [accessibilityState]="{ selected: tab() === item.id }"
+                (press)="tab.set(item.id)"
+                class="tab-item flex-1 items-center justify-center gap-1"
+                [class.tab-item-active]="tab() === item.id"
               >
-              <text
-                class="tab-label"
-                [class.tab-text-active]="tab() === item.id"
-                >{{ item.label }}</text
-              >
-            </pressable>
-          }
-        </view>
+                <text
+                  class="tab-symbol"
+                  [class.tab-text-active]="tab() === item.id"
+                  >{{ item.symbol }}</text
+                >
+                <text
+                  class="tab-label"
+                  [class.tab-text-active]="tab() === item.id"
+                  >{{ item.label }}</text
+                >
+              </pressable>
+            }
+          </view>
+        }
       </safe-area-view>
     </safe-area-provider>
   `,
   styles: ":host { flex: 1; }",
 })
 export class App {
+  protected readonly business = inject(BusinessPageService);
   protected readonly tab = signal<Tab>("home");
   protected readonly tabs: readonly {
     id: Tab;

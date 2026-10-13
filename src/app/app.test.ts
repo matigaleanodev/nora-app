@@ -159,3 +159,37 @@ test("conecta los CRUD reales al storage y conserva formularios al cambiar de pe
   await user.press(screen.getByRole("button", { name: "Eliminar borrador" }));
   expect(records.get("estimates.v1")).toEqual([]);
 });
+
+test("Mi negocio guarda el perfil y vuelve al formulario de cliente sin perder su borrador", async () => {
+  const { user, storage } = await setup();
+  await user.press(screen.getByRole("tab", { name: "Clientes" }));
+  await vi.waitFor(() =>
+    expect(screen.queryByText("Cargando clientes…")).toBeNull(),
+  );
+  await user.press(screen.getByRole("button", { name: "Agregar cliente" }));
+  await fireEvent.changeText(
+    screen.getByLabelText("Nombre *"),
+    "Cliente pendiente",
+  );
+  await user.press(screen.getByRole("button", { name: "Mi negocio" }));
+  await vi.waitFor(() =>
+    expect(screen.queryByText("Cargando tus datos…")).toBeNull(),
+  );
+  await fireEvent.changeText(
+    screen.getByLabelText("Nombre o nombre comercial *"),
+    "Electricidad Juan",
+  );
+  await user.press(
+    screen.getByRole("button", { name: "Guardar datos del negocio" }),
+  );
+  expect(storage.write).toHaveBeenCalledWith(
+    "business-profile.v1",
+    expect.objectContaining({ displayName: "Electricidad Juan" }),
+  );
+  await user.press(
+    screen.getByRole("button", { name: "Volver desde Mi negocio" }),
+  );
+  expect(screen.getByLabelText("Nombre *").props["text"]).toBe(
+    "Cliente pendiente",
+  );
+});

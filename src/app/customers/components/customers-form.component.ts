@@ -2,7 +2,7 @@ import { Component, inject, input, output } from "@angular/core";
 import { Pressable, Text, View } from "@ng-native/components";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
 import { FormFieldComponent } from "../../shared/components/form-field/form-field.component";
-import { IconToggleComponent } from "../../shared/components/icon-toggle/icon-toggle.component";
+import { ContactFieldsComponent } from "../../shared/components/contact-fields/contact-fields.component";
 import { ModalComponent } from "../../shared/components/modal/modal.component";
 import { AddressEditorService } from "../services/address-editor.service";
 import type { CustomerInput } from "../models/customer.model";
@@ -16,7 +16,7 @@ import {
   providers: [AddressEditorService],
   imports: [
     ModalComponent,
-    IconToggleComponent,
+    ContactFieldsComponent,
     Pressable,
     Text,
     View,
@@ -33,48 +33,10 @@ import {
         (valueChange)="changed.emit({ name: $event })"
         [disabled]="busy()"
       />
-      <text class="section-title">Contacto</text
-      ><text class="footnote"
-        >Argentina · +549 · código sin 0 y número sin 15</text
-      >
-      <view class="flex-row items-end gap-2">
-        <view class="area-field"
-          ><nora-field
-            autoComplete="tel-area-code"
-            label="Código de área"
-            [required]="!!form().phoneNumber"
-            placeholder="Ej.: 376"
-            keyboard="phone-pad"
-            [value]="form().areaCode"
-            (valueChange)="changed.emit({ areaCode: $event })"
-            [disabled]="busy()"
-        /></view>
-        <view class="flex-1"
-          ><nora-field
-            autoComplete="tel-local"
-            label="Número"
-            [required]="!!form().areaCode"
-            placeholder="Ej.: 4123456"
-            keyboard="phone-pad"
-            [value]="form().phoneNumber"
-            (valueChange)="changed.emit({ phoneNumber: $event })"
-            [disabled]="busy()"
-        /></view>
-        <nora-icon-toggle
-          label="Tiene WhatsApp"
-          [checked]="form().whatsapp"
-          [disabled]="busy()"
-          (checkedChange)="changed.emit({ whatsapp: $event })"
-        />
-      </view>
-      <nora-field
-        autoComplete="email"
-        label="Email"
-        placeholder="Ej.: ana@gmail.com"
-        keyboard="email-address"
-        [value]="form().email"
-        (valueChange)="changed.emit({ email: $event })"
+      <nora-contact-fields
+        [value]="form()"
         [disabled]="busy()"
+        (changed)="changed.emit($event)"
       />
       <text class="section-title">Direcciones</text
       ><text class="footnote"
