@@ -7,6 +7,7 @@ import {
   bootstrapCheckLg,
   bootstrapPlusLg,
   bootstrapTrash3,
+  bootstrapGear,
 } from "@ng-icons/bootstrap-icons";
 
 /** Los íconos son decorativos: el control padre recibe los toques y define su etiqueta accesible. */
@@ -19,6 +20,7 @@ import {
       bootstrapCheckLg,
       bootstrapPlusLg,
       bootstrapTrash3,
+      bootstrapGear,
     }),
   ],
   template: `<view pointerEvents="none" [accessible]="false"
@@ -31,6 +33,7 @@ export class IconComponent {
     | "bootstrapCheckLg"
     | "bootstrapPlusLg"
     | "bootstrapTrash3"
+    | "bootstrapGear"
   >();
   readonly size = input(24);
   readonly color = input("#64685c");
