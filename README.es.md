@@ -32,7 +32,7 @@ Después: fotos/ubicación, recordatorios y biometría opcional. Etapa paga con 
 
 ## Convenciones
 
-Identificadores/comentarios en inglés; textos de usuario inicialmente en español. Angular moderno y features completas incrementales. agents.md y roadmap.md locales ignorados por Git. AGENTS.md/CLAUDE.md del starter eliminados tras consolidar reglas nativas útiles en agents.md. README y traducción se versionan.
+Identificadores en inglés; comentarios, documentación de código y tests en español. Angular moderno y features completas incrementales. agents.md y roadmap.md locales ignorados por Git. AGENTS.md/CLAUDE.md del starter eliminados tras consolidar reglas nativas útiles en agents.md. README y traducción se versionan.
 
 [Angular Native](https://ng-native.com/guide/getting-started) · [Nora API](https://github.com/matigaleanodev/nora-api)
 
@@ -54,7 +54,7 @@ Validación: typecheck y suite actual correctos (interacciones nativas y dominio
 
 ## Pruebas unitarias
 
-Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 136 casos correctos en veintidós archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite y Expo Crypto están simulados: esta suite no demuestra ejecución nativa de la base ni del generador aleatorio. `npm run typecheck` también correcto.
+Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 158 casos correctos en veinticinco archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite y Expo Crypto están simulados: esta suite no demuestra ejecución nativa de la base ni del generador aleatorio. `npm run typecheck` también correcto.
 
 ## Formato
 
@@ -83,3 +83,11 @@ Los formularios incluyen ejemplos y marcan los campos obligatorios con *. El cam
 Flujo de desarrollo: crear ramas feat/, fix/, refactor/, test/, chore/ o docs/ desde main actualizado; usar commits semánticos en español type(scope): descripción y abrir PR hacia main. dev refleja main y no debe contener trabajo independiente. CI verifica formato, tipos, unitarios y exportación del bundle Android; no genera APK ni publica. sync-dev.yml crea dev si falta, intenta fast-forward y luego merge, y usa force-with-lease sólo ante conflictos, según el estándar del workspace. Usa GITHUB_TOKEN con contents:write; DEV_SYNC_PAT opcional permite disparar workflows desde el push del bot. Con GITHUB_TOKEN ese push a dev no dispara otro CI; los de PR/main sí se ejecutan. Las reglas de ramas deben permitir la sincronización del bot. Los workflows se activan al subirlos.
 
 Estado GitHub verificado al 2026-10-09: dev remota creada desde main. main exige PR (cero aprobaciones obligatorias para el mantenimiento individual), resolución de conversaciones y aplica protección a administradores; bloquea push forzado y borrado. dev bloquea borrado y permite pushes directos/forzados para sincronizar el espejo, sin enforcement de administradores. El check de GitHub Actions «Formato, tipos, tests y bundle Android» es obligatorio en main, con la rama actualizada antes del merge.
+
+## Mi negocio
+
+El engranaje del header abre el perfil del prestador: nombre o nombre comercial obligatorio, teléfono argentino, email y logo opcionales. Se guarda localmente en SQLite bajo `business-profile.v1`; el logo se copia al directorio privado durable `business-logos` al guardar. Admite JPG, PNG y WebP de hasta 5 MB. Cancelar la selección conserva el logo anterior; reemplazarlo elimina la copia anterior sólo después de guardar correctamente. Los originales de la galería se conservan.
+
+Los componentes de contacto se comparten con clientes. Los servicios separan validación/persistencia, archivos nativos y estado de pantalla. Volver confirma cambios sin guardar y conserva la pantalla anterior. El perfil prepara los futuros documentos; esta iteración todavía no genera PDF.
+
+Validación: 158 tests en 25 archivos, typecheck y export Android correctos. Falta probar selección del logo y persistencia del perfil/logo al reiniciar Expo Go en el teléfono.

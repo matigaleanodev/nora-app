@@ -32,7 +32,7 @@ Later: photos/location, reminders and optional biometric lock. Paid optional clo
 
 ## Conventions
 
-English code identifiers/comments; initially Spanish user text. Modern Angular and incremental complete features. Local agents.md and roadmap.md are ignored by Git. Starter AGENTS.md/CLAUDE.md were removed after consolidating useful native rules into agents.md. READMEs are versioned.
+English code identifiers; Spanish comments, code documentation, tests and user text. Modern Angular and incremental complete features. Local agents.md and roadmap.md are ignored by Git. Starter AGENTS.md/CLAUDE.md were removed after consolidating useful native rules into agents.md. READMEs are versioned.
 
 [Angular Native](https://ng-native.com/guide/getting-started) · [Nora API](https://github.com/matigaleanodev/nora-api)
 
@@ -83,3 +83,11 @@ Forms provide example placeholders and mark mandatory fields with *. Native cont
 Development workflow: create feat/, fix/, refactor/, test/, chore/ or docs/ branches from updated main; use Spanish semantic commits type(scope): description and open a PR targeting main. dev mirrors main and must not hold independent work. CI checks formatting, types, unit tests and Android bundle export; it does not produce an APK or publish anything. sync-dev.yml creates dev if missing, attempts fast-forward then merge, and uses a force-with-lease fallback only on conflicts, following the workspace standard. Authentication uses GITHUB_TOKEN with contents:write; an optional DEV_SYNC_PAT enables downstream workflows on the bot push. With GITHUB_TOKEN, the push to dev does not trigger another CI; PR/main CI still runs. Existing branch rules must permit the bot synchronization. Workflows become active after they are pushed.
 
 GitHub state verified on 2026-10-09: remote dev was created from main. main requires a PR (zero required approvals for the solo maintainer), conversation resolution, and applies protection to administrators; force pushes and deletion are blocked. dev blocks deletion and permits direct/force pushes for mirror synchronization, with administrator enforcement disabled. The GitHub Actions check “Formato, tipos, tests y bundle Android” is required on main, with the branch up to date before merging.
+
+## My business
+
+The header settings button opens the provider profile: required personal/business name, optional Argentine phone, email and logo. SQLite stores it under `business-profile.v1`; saving copies the logo into the durable private `business-logos` directory. Supported formats: JPG, PNG and WebP, up to 5 MB. Canceling selection preserves the previous logo; replacing it removes the old private copy only after a successful save. Gallery originals remain untouched.
+
+Contact fields are shared with customers. Separate services own validation/persistence, native files and page state. Back navigation confirms unsaved changes and preserves the previous screen. This profile prepares future documents; PDF generation is still pending.
+
+Validation: 158 tests across 25 files, typecheck and Android export pass. Logo selection and profile/logo persistence after restarting Expo Go still require device validation.
