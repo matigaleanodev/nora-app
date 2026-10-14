@@ -8,7 +8,7 @@ Android assistant for technicians: customers, estimates with materials/labor, an
 
 Android app with example home tasks and working local customer/estimate CRUD screens. Bottom tabs: Customers · Home · Estimates. Both domains have searchable lists, a circular add button, full details and separate create/edit forms. Customers archive/restore; only draft estimates can be edited/deleted. Confirmations protect destructive actions and unsaved changes. UUID entities and SQLite persistence remain offline, with no account/backend/ads. Light terracotta/olive palette and semantic theme tokens. The user tested the initial preview in Expo Go; the new CRUD, native keyboard/back behavior and persistence after restarting Android still need device validation.
 
-Manifest: Angular 22, Angular Native 0.7, Expo SDK 57, React Native 0.86, TypeScript 6, Vitest 5. Resolved versions: package-lock.json. Native views through Fabric, not Ionic/WebView. Tailwind CSS 4 is configured through @ng-native/tailwind 0.7, Metro and src/styles.css. Global native styles are registered in src/main.ts.
+Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6, Vitest 5. Resolved versions: package-lock.json. Native views through Fabric, not Ionic/WebView. Tailwind CSS 4 is configured through @ng-native/tailwind 0.13.0, Metro and src/styles.css. Global native styles are registered in src/main.ts.
 
 ## Ubuntu/WSL development
 
@@ -54,7 +54,7 @@ Validation: typecheck and nine tests pass (native UI tests plus domain/persisten
 
 ## Unit tests
 
-Run `npm test` from Ubuntu/WSL. The suite currently has 136 passing cases across twenty-two files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite and Expo Crypto are mocked; this suite does not prove native database or random-generator execution. `npm run typecheck` also passes.
+Run `npm test` from Ubuntu/WSL. The suite currently has 158 passing cases across twenty-five files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite and Expo Crypto are mocked; this suite does not prove native database or random-generator execution. `npm run typecheck` also passes.
 
 ## Formatting
 
@@ -91,3 +91,9 @@ The header settings button opens the provider profile: required personal/busines
 Contact fields are shared with customers. Separate services own validation/persistence, native files and page state. Back navigation confirms unsaved changes and preserves the previous screen. This profile prepares future documents; PDF generation is still pending.
 
 Validation: 158 tests across 25 files, typecheck and Android export pass. Logo selection and profile/logo persistence after restarting Expo Go still require device validation.
+
+## Framework updates
+
+Following Angular Native closely is a primary purpose of this repository. Update its packages together on a dedicated feature branch using the official migrator, inspect release notes and migration notes, then verify types, tests, formatting and Android export. Physical-device checks cover forms, keyboard, navigation, modals, toasts and local persistence before merging. The 0.7.0 → 0.13.0 migration only changed package versions; Expo, React Native and Angular remain on their existing release lines. Inspector integration is a separate increment.
+
+Verification on 2026-10-14: typecheck, 158 tests, formatting and Android export pass on 0.13.0. Physical-device regression testing remains pending.

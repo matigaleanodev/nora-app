@@ -8,7 +8,7 @@ Asistente Android para técnicos: clientes, presupuestos con materiales/mano de 
 
 App Android con tareas de ejemplo en Inicio y pantallas CRUD locales de clientes/presupuestos. Tabs inferiores: Clientes · Inicio · Presupuestos. Ambos dominios tienen listas con búsqueda, botón circular para agregar, detalle completo y formularios de creación/edición. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Confirmaciones protegen acciones destructivas y cambios sin guardar. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. Tema claro terracota/oliva con tokens semánticos. El usuario probó la vista inicial en Expo Go; los nuevos CRUD, teclado/Atrás nativos y persistencia tras reiniciar Android todavía requieren validación en teléfono.
 
-Manifest: Angular 22, Angular Native 0.7, Expo SDK 57, React Native 0.86, TypeScript 6 y Vitest 5. Versiones resueltas en package-lock.json. Vistas nativas mediante Fabric, no Ionic/WebView. Tailwind CSS 4 integrado con @ng-native/tailwind 0.7, Metro y src/styles.css; estilos globales nativos registrados en src/main.ts.
+Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6 y Vitest 5. Versiones resueltas en package-lock.json. Vistas nativas mediante Fabric, no Ionic/WebView. Tailwind CSS 4 integrado con @ng-native/tailwind 0.13.0, Metro y src/styles.css; estilos globales nativos registrados en src/main.ts.
 
 ## Desarrollo Ubuntu/WSL
 
@@ -91,3 +91,9 @@ El engranaje del header abre el perfil del prestador: nombre o nombre comercial 
 Los componentes de contacto se comparten con clientes. Los servicios separan validación/persistencia, archivos nativos y estado de pantalla. Volver confirma cambios sin guardar y conserva la pantalla anterior. El perfil prepara los futuros documentos; esta iteración todavía no genera PDF.
 
 Validación: 158 tests en 25 archivos, typecheck y export Android correctos. Falta probar selección del logo y persistencia del perfil/logo al reiniciar Expo Go en el teléfono.
+
+## Actualizaciones del framework
+
+Seguir de cerca Angular Native es una finalidad principal de este repositorio. Actualizar sus paquetes juntos en una rama feat dedicada con el migrador oficial, revisar releases y notas de migración, y verificar tipos, tests, formato y export Android. Antes del merge, probar formularios, teclado, navegación, modales, toasts y persistencia local en el teléfono. La migración 0.7.0 → 0.13.0 sólo cambió versiones de paquetes; Expo, React Native y Angular conservan sus líneas actuales. La integración del inspector queda como otro incremento.
+
+Validación del 2026-10-14: tipos, 158 tests, formato y export Android correctos con 0.13.0. Falta la prueba de regresión en teléfono.
