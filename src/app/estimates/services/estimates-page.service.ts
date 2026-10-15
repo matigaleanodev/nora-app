@@ -12,6 +12,7 @@ import {
 } from "@angular/core";
 import { Dialogs, HardwareBack, Keyboard } from "@ng-native/device";
 import { EstimatesService } from "./estimates.service";
+import { EstimatePdfService } from "./estimate-pdf.service";
 import { CustomersService } from "../../customers/services/customers.service";
 import type { Customer } from "../../customers/models/customer.model";
 import { NotificationService } from "../../shared/services/notification.service";
@@ -65,6 +66,7 @@ export const UNIT_OPTIONS = [
 @Injectable({ providedIn: "root" })
 export class EstimatesPageService {
   private readonly estimates = inject(EstimatesService);
+  private readonly pdf = inject(EstimatePdfService);
   private readonly customers = inject(CustomersService);
   private readonly notifications = inject(NotificationService);
   private readonly dialogs = inject(Dialogs);
@@ -374,6 +376,19 @@ export class EstimatesPageService {
       this.working.set(false);
     }
   }
+  async sharePdf(): Promise<void> {
+    const estimate = this.selected();
+    if (!estimate || this.busy() || this.loading()) return;
+    this.working.set(true);
+    this.errorState.set("");
+    try {
+      await this.pdf.share(estimate);
+    } catch (error: unknown) {
+      this.fail(error, "No pudimos preparar o compartir el PDF.");
+    } finally {
+      this.working.set(false);
+    }
+  }
   async changeStatus(status: EstimateStatus): Promise<void> {
     const estimate = this.selected();
     if (!estimate || this.busy()) return;
@@ -383,7 +398,7 @@ export class EstimatesPageService {
         status === EstimateStatus.Sent &&
         !(await this.dialogs.confirm("¿Marcar como enviado?", {
           message:
-            "El presupuesto quedará bloqueado para edición. Esto no envía mensajes ni genera un PDF.",
+            "El presupuesto quedará bloqueado para edición. Esto no envía mensajes ni comparte el PDF.",
           confirm: "Marcar enviado",
           cancel: "Cancelar",
         }))
