@@ -1,0 +1,20 @@
+{
+  "screens": 35,
+  "errors": [],
+  "invalidRoutes": [],
+  "horizontalOverflow": [],
+  "menuRows": [
+    "Datos del negocio",
+    "Ayuda",
+    "Acerca de Nora"
+  ],
+  "menuEscapeCloses": true,
+  "budgetFlow": "Revisar presupuesto",
+  "mobileOverflow": false,
+  "reducedAnimation": "none",
+  "splashMidpoint": "matrix(1, 0, 0, 1, 0, -2.5)",
+  "reducedSplash": {
+    "animation": "none",
+    "transform": "none"
+  }
+}

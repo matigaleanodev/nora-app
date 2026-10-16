@@ -1,5 +1,7 @@
 # Nora App
 
+[Identidad visual](docs/visual-identity.es.md) · [Diseño y UX](docs/ux-guidelines.es.md) · [Kit visual](docs/design-kit/README.es.md) · [Traspaso a desarrollo](docs/implementation-handoff.es.md).
+
 **N.O.R.A. — Notas, Organización, Registros y Administración.**
 
 Asistente Android para técnicos: clientes, presupuestos con materiales/mano de obra y PDF para compartir.
