@@ -189,12 +189,29 @@ export async function buildEstimatePdf(
   const tableRow = (cells: readonly string[], header = false): void => {
     const widths = [205, 74, 110, WIDTH - 389];
     const lines = cells.map((cell, index) =>
-      wrap(cell, widths[index] - 12, header ? 9 : 10),
+      wrap(cell, widths[index] - 24, header ? 9 : 10),
     );
     const length = Math.max(...lines.map((cell) => cell.length));
-    ensure(Math.min(length * 15 + 12, PAGE_HEIGHT - MARGIN * 2 - 60));
+    if (
+      y - Math.min(length * 15 + 12, PAGE_HEIGHT - MARGIN * 2 - 60) <
+      MARGIN + 24
+    ) {
+      addPage();
+      if (!header)
+        tableRow(
+          ["Descripción", "Cantidad", "Precio unitario", "Subtotal"],
+          true,
+        );
+    }
     for (let line = 0; line < length; line++) {
-      ensure(15);
+      if (y - 15 < MARGIN + 24) {
+        addPage();
+        if (!header)
+          tableRow(
+            ["Descripción", "Cantidad", "Precio unitario", "Subtotal"],
+            true,
+          );
+      }
       let x = MARGIN;
       lines.forEach((cell, index) => {
         const content = cell[line] ?? "";
