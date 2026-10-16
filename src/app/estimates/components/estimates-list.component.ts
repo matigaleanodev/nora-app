@@ -22,6 +22,16 @@ import type { Estimate, EstimateStatus } from "../models/estimate.model";
       (valueChange)="searchChange.emit($event)"
       placeholder="Ej.: P-001 o Ana"
     />
+    <view class="flex-row flex-wrap gap-2">
+      @for (filter of filters; track filter.value) {
+        <nora-button
+          variant="choice"
+          [text]="filter.label"
+          [selected]="statusFilter() === filter.value"
+          (pressed)="statusFilterChange.emit(filter.value)"
+        />
+      }
+    </view>
     @if (loading()) {
       <text class="muted">Cargando presupuestos…</text>
     } @else if (error()) {
@@ -35,22 +45,24 @@ import type { Estimate, EstimateStatus } from "../models/estimate.model";
         <pressable
           accessibilityRole="button"
           [accessibilityLabel]="'Ver presupuesto ' + row.estimate.number"
-          class="task-card rounded-2xl p-4 gap-2"
+          class="compact-row gap-2"
           (press)="opened.emit(row.estimate)"
         >
           <view class="flex-row justify-between gap-3"
-            ><text class="task-title flex-1">{{ row.estimate.number }}</text
+            ><text class="task-title flex-1"
+              >{{ row.estimate.number }} ·
+              {{ row.estimate.customerSnapshot.name }}</text
             ><text class="example-badge">{{
               statusLabels()[row.estimate.status]
             }}</text></view
           >
-          <text class="muted">{{ row.estimate.customerSnapshot.name }}</text
+          <text class="muted">{{ row.estimate.description }}</text
           ><text class="section-title">{{
             row.totalCents | money: row.estimate.currency
           }}</text>
         </pressable>
       } @empty {
-        <view class="task-card rounded-2xl p-6 gap-2"
+        <view class="task-card rounded-lg p-6 gap-2"
           ><text class="section-title">Tus próximos trabajos empiezan acá.</text
           ><text class="muted"
             >Primero agregá un cliente y después usá + para preparar su
@@ -62,6 +74,13 @@ import type { Estimate, EstimateStatus } from "../models/estimate.model";
   </view>`,
 })
 export class EstimatesListComponent {
+  readonly statusFilter = input<"all" | "draft" | "sent">("all");
+  readonly statusFilterChange = output<"all" | "draft" | "sent">();
+  protected readonly filters = [
+    { value: "all", label: "Todos" },
+    { value: "draft", label: "Borradores" },
+    { value: "sent", label: "Enviados" },
+  ] as const;
   readonly rows = input.required<readonly EstimateListRow[]>();
   readonly statusLabels = input.required<Record<EstimateStatus, string>>();
   readonly loading = input(false);

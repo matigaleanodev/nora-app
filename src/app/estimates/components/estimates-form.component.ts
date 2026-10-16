@@ -1,5 +1,5 @@
-import { Component, input, output } from "@angular/core";
-import { Text, View } from "@ng-native/components";
+import { Component, input, output, computed, signal } from "@angular/core";
+import { Text, View, Pressable } from "@ng-native/components";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
 import { FormFieldComponent } from "../../shared/components/form-field/form-field.component";
 import { DateFieldComponent } from "../../shared/components/date-field/date-field.component";
@@ -16,10 +16,10 @@ import type {
   MeasurementUnit,
 } from "../models/estimate.model";
 import { EstimateCustomerSelectionComponent } from "./estimate-customer-selection.component";
-import { EstimateItemEditorComponent } from "./estimate-item-editor.component";
 @Component({
   selector: "nora-estimates-form",
   imports: [
+    Pressable,
     Text,
     View,
     ActionButtonComponent,
@@ -27,7 +27,6 @@ import { EstimateItemEditorComponent } from "./estimate-item-editor.component";
     MoneyPipe,
     DateFieldComponent,
     EstimateCustomerSelectionComponent,
-    EstimateItemEditorComponent,
   ],
   template: `<view class="gap-4">
     <nora-field
@@ -69,25 +68,46 @@ import { EstimateItemEditorComponent } from "./estimate-item-editor.component";
       importes.</text
     >
     <text class="section-title">Materiales y mano de obra</text>
-    @for (item of form().items; track $index; let index = $index) {
-      <nora-estimate-item-editor
-        [item]="item"
-        [index]="index"
-        [currency]="form().currency"
-        [subtotal]="preview().subtotals[index]"
-        [units]="units()"
-        [itemTypes]="itemTypes()"
-        [busy]="busy()"
-        (changed)="itemChanged.emit({ index, changes: $event })"
-        (removed)="itemRemoved.emit(index)"
+    @for (group of groups(); track group.type) {
+      <text class="section-title">{{ group.label }}</text>
+      @if (group.subtotal !== null) {
+        <text class="muted"
+          >Subtotal {{ group.subtotal! | money: form().currency }}</text
+        >
+      }
+      @for (row of group.rows; track row.index) {
+        <pressable
+          class="compact-row gap-2"
+          accessibilityRole="button"
+          [accessibilityLabel]="'Editar ' + row.item.description"
+          (press)="itemEdited.emit(row.index)"
+        >
+          <text class="body-text">{{ row.item.description }}</text>
+          <text class="muted"
+            >{{ row.item.quantity }} {{ row.item.unit }} × {{ row.item.price }}
+            {{ form().currency }}</text
+          >
+          @if (row.subtotal !== undefined) {
+            <text class="task-title">{{
+              row.subtotal! | money: form().currency
+            }}</text>
+          } @else {
+            <text class="error-text"
+              >Falta completar este material o tarea</text
+            >
+          }
+        </pressable>
+      }
+      <nora-button
+        [text]="
+          group.type === 'material'
+            ? 'Agregar material'
+            : 'Agregar mano de obra'
+        "
+        [disabled]="busy()"
+        (pressed)="typeAdded.emit(group.type)"
       />
     }
-    <nora-button
-      text="+ Agregar ítem"
-      label="Agregar ítem"
-      [disabled]="busy()"
-      (pressed)="itemAdded.emit()"
-    />
     @if (preview().total !== null) {
       <text class="section-title"
         >Total: {{ preview().total! | money: form().currency }}</text
@@ -95,26 +115,55 @@ import { EstimateItemEditorComponent } from "./estimate-item-editor.component";
     } @else {
       <text class="footnote">{{ preview().error }}</text>
     }
-    <nora-date-field
-      label="Válido hasta"
-      [value]="form().validUntil"
-      [disabled]="busy()"
-      (valueChange)="changed.emit({ validUntil: $event })"
+    <nora-button
+      text="Vigencia y condiciones"
+      [selected]="optionsOpen()"
+      (pressed)="optionsOpen.set(!optionsOpen())"
     />
-    <nora-field
-      label="Notas y condiciones"
-      placeholder="Ej.: Incluye materiales. Pago al finalizar."
-      [multiline]="true"
-      [value]="form().notes"
-      [disabled]="busy()"
-      (valueChange)="changed.emit({ notes: $event })"
-    />
-    <text class="footnote"
-      >Podés guardar un borrador sin ítems y completarlo después.</text
-    >
+    @if (!optionsOpen() && (form().validUntil || form().notes)) {
+      <text class="muted">Contiene datos cargados</text>
+    }
+    @if (optionsOpen()) {
+      <nora-date-field
+        label="Válido hasta"
+        [value]="form().validUntil"
+        [disabled]="busy()"
+        (valueChange)="changed.emit({ validUntil: $event })"
+      />
+      <nora-field
+        label="Notas y condiciones"
+        placeholder="Ej.: Incluye materiales. Pago al finalizar."
+        [multiline]="true"
+        [value]="form().notes"
+        [disabled]="busy()"
+        (valueChange)="changed.emit({ notes: $event })"
+      />
+    }
   </view>`,
 })
 export class EstimatesFormComponent {
+  readonly optionsOpen = signal(false);
+  readonly itemEdited = output<number>();
+  readonly typeAdded = output<EstimateItemType>();
+  protected readonly groups = computed(() =>
+    this.itemTypes().map((group) => {
+      const rows = this.form()
+        .items.map((item, index) => ({
+          item,
+          index,
+          subtotal: this.preview().subtotals[index],
+        }))
+        .filter((row) => row.item.type === group.value);
+      return {
+        type: group.value,
+        label: group.value === "material" ? "Materiales" : "Mano de obra",
+        rows,
+        subtotal: rows.every((row) => row.subtotal !== undefined)
+          ? rows.reduce((sum, row) => sum + row.subtotal!, 0)
+          : null,
+      };
+    }),
+  );
   readonly form = input.required<EstimateForm>();
   readonly customer = input<Customer>();
   readonly busy = input(false);
@@ -126,10 +175,4 @@ export class EstimatesFormComponent {
     input.required<readonly { value: EstimateItemType; label: string }[]>();
   readonly changed = output<Partial<EstimateForm>>();
   readonly chooseCustomer = output<void>();
-  readonly itemAdded = output<void>();
-  readonly itemRemoved = output<number>();
-  readonly itemChanged = output<{
-    index: number;
-    changes: Partial<Omit<EstimateItemForm, "id">>;
-  }>();
 }

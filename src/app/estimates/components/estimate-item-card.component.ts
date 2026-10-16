@@ -7,9 +7,6 @@ import type { Currency } from "../models/estimate.model";
   selector: "nora-estimate-item-card",
   imports: [Text, View, MoneyPipe],
   template: `<view class="compact-row gap-2">
-    <text class="task-category">{{
-      row().item.type === "material" ? "Material" : "Mano de obra"
-    }}</text>
     <text class="task-title">{{ row().item.description }}</text
     ><text class="muted"
       >{{ row().item.quantity }} {{ row().unitLabel }} ×

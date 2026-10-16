@@ -1,3 +1,5 @@
+import { EstimateRecoveryService } from "../services/estimate-recovery.service";
+import { IdService } from "../../shared/services/id.service";
 import { render, screen, userEvent, fireEvent } from "@ng-native/testing";
 import { Dialogs } from "@ng-native/device";
 import { expect, test, vi } from "vitest";
@@ -36,6 +38,20 @@ async function setup(
   const notifications = { success: vi.fn(), danger: vi.fn(), warning: vi.fn() };
   const result = await render(EstimatesPageComponent, {
     providers: [
+      {
+        provide: IdService,
+        useValue: {
+          create: async () => "00000000-0000-4000-8000-000000000099",
+        },
+      },
+      {
+        provide: EstimateRecoveryService,
+        useValue: {
+          getAll: async () => [],
+          save: async () => undefined,
+          remove: async () => undefined,
+        },
+      },
       { provide: EstimatesService, useValue: estimates },
       { provide: EstimatePdfService, useValue: pdf },
       { provide: CustomersService, useValue: customers },
@@ -91,21 +107,16 @@ test("crea un presupuesto en USD con cantidad decimal y precio convertido a cent
     "Pintura",
   );
   await user.press(screen.getByRole("button", { name: "Moneda USD" }));
-  await user.press(screen.getByRole("button", { name: "Agregar ítem" }));
-  await user.type(
-    screen.getByLabelText("Descripción del ítem 1"),
-    "Pintura blanca",
-  );
+  await user.press(screen.getByRole("button", { name: "Agregar material" }));
+  await user.type(screen.getByLabelText("Material *"), "Pintura blanca");
+  await fireEvent.changeText(screen.getByLabelText("Cantidad *"), "1,5");
   await fireEvent.changeText(
-    screen.getByLabelText("Cantidad del ítem 1"),
-    "1,5",
-  );
-  await fireEvent.changeText(
-    screen.getByLabelText("Precio unitario del ítem 1"),
+    screen.getByLabelText("Precio por unidad *"),
     "10,25",
   );
+  await user.press(screen.getByRole("button", { name: "Agregar" }));
   expect(screen.getByText("Total: US$ 15,38")).toBeTruthy();
-  await user.press(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.press(screen.getByRole("button", { name: "Revisar presupuesto" }));
   expect(estimates.create).toHaveBeenCalledWith(
     expect.objectContaining({
       number: "P-002",
@@ -114,15 +125,19 @@ test("crea un presupuesto en USD con cantidad decimal y precio convertido a cent
       currency: Currency.USD,
       items: [expect.objectContaining({ quantity: 1.5, unitPriceCents: 1025 })],
     }),
+    "00000000-0000-4000-8000-000000000099",
   );
 });
-test("advierte si no hay clientes activos y no abre un formulario inválido", async () => {
-  const { user, notifications } = await setup(null, false);
+test("permite comenzar sin clientes y conserva el trabajo incompleto", async () => {
+  const { user, vm } = await setup(null, false);
   await user.press(screen.getByRole("button", { name: "Agregar presupuesto" }));
-  expect(notifications.warning).toHaveBeenCalledWith(
-    expect.stringContaining("cliente activo"),
+  expect(screen.getByLabelText("Número de presupuesto *")).toBeTruthy();
+  await fireEvent.changeText(
+    screen.getByLabelText("Descripción del trabajo *"),
+    "Trabajo pendiente",
   );
-  expect(screen.queryByLabelText("Número de presupuesto *")).toBeNull();
+  await vi.waitFor(() => expect(vm.saveState()).toBe("saved"));
+  expect(vm.recoveries()[0].form.description).toBe("Trabajo pendiente");
 });
 test("editar conserva los identificadores de ítems y delega la actualización", async () => {
   const { user, estimates } = await setup();
@@ -134,7 +149,7 @@ test("editar conserva los identificadores de ítems y delega la actualización",
     screen.getByLabelText("Descripción del trabajo *"),
     "Cocina y baño",
   );
-  await user.press(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.press(screen.getByRole("button", { name: "Revisar presupuesto" }));
   expect(estimates.update).toHaveBeenCalledWith(
     estimateFixture.id,
     expect.objectContaining({
@@ -148,20 +163,25 @@ test("editar conserva los identificadores de ítems y delega la actualización",
     }),
   );
 });
-test("rechaza importes ambiguos sin llamar al dominio y conserva los campos", async () => {
-  const { user, estimates, notifications } = await setup();
+test("rechaza importes ambiguos y cancelar conserva el material anterior", async () => {
+  const { user, estimates, vm } = await setup();
   await user.press(
     screen.getByRole("button", { name: "Ver presupuesto P-001" }),
   );
   await user.press(screen.getByRole("button", { name: "Editar presupuesto" }));
+  await user.press(
+    screen.getByRole("button", { name: "Editar Pintura blanca" }),
+  );
   await fireEvent.changeText(
-    screen.getByLabelText("Precio unitario del ítem 1"),
+    screen.getByLabelText("Precio por unidad *"),
     "1.250,50",
   );
-  await user.press(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.press(screen.getByRole("button", { name: "Guardar cambios" }));
   expect(estimates.update).not.toHaveBeenCalled();
   expect(screen.getByDisplayValue("1.250,50")).toBeTruthy();
-  expect(notifications.danger).toHaveBeenCalled();
+  expect(vm.editorError()).toContain("precio válido");
+  await user.press(screen.getByRole("button", { name: "Cancelar" }));
+  expect(vm.form().items[0].price).toBe("1250,50");
 });
 test("cancelar eliminación conserva el borrador y confirmar lo elimina", async () => {
   const { user, estimates, confirm } = await setup();

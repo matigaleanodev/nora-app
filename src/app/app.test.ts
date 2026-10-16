@@ -9,22 +9,35 @@ import { LocalStorageService } from "./core/storage/local-storage.service";
 async function setup(failWrite = false) {
   const storage = {
     read: vi.fn().mockResolvedValue(null),
+    update: async <T>(key: string, change: (value: T | null) => T) => {
+      await storage.write(key, change(null));
+    },
     write: failWrite
       ? vi.fn().mockRejectedValue(new Error("disk unavailable"))
       : vi.fn().mockResolvedValue(undefined),
   };
   await render(App, {
-    providers: [{ provide: LocalStorageService, useValue: storage }],
+    providers: [
+      { provide: LocalStorageService, useValue: storage },
+      {
+        provide: IdService,
+        useValue: {
+          create: async () => "00000000-0000-4000-8000-000000000098",
+        },
+      },
+    ],
   });
   await vi.waitFor(() =>
-    expect(screen.queryByText("Cargando pendientes…")).toBeNull(),
+    expect(screen.queryByText("Cargando tu negocio…")).toBeNull(),
   );
   return { storage, user: userEvent.setup() };
 }
 
 test("inicia en Inicio y permite navegar entre las tres pestañas", async () => {
   const { user } = await setup();
-  expect(screen.getByText("Próximos pasos")).toBeTruthy();
+  await vi.waitFor(() =>
+    expect(screen.getByText("Tus presupuestos")).toBeTruthy(),
+  );
   await user.press(screen.getByRole("tab", { name: "Clientes" }));
   await vi.waitFor(() =>
     expect(screen.getByText("Todavía no hay clientes acá.")).toBeTruthy(),
@@ -36,36 +49,9 @@ test("inicia en Inicio y permite navegar entre las tres pestañas", async () => 
     ).toBeTruthy(),
   );
   await user.press(screen.getByRole("tab", { name: "Inicio" }));
-  expect(screen.getByText("Próximos pasos")).toBeTruthy();
-});
-
-test("guarda las tareas completadas y actualiza el contador de pendientes", async () => {
-  const { user, storage } = await setup();
-  await user.press(
-    screen.getByRole("checkbox", { name: "Preparar presupuesto" }),
+  await vi.waitFor(() =>
+    expect(screen.getByText("Tus presupuestos")).toBeTruthy(),
   );
-  await vi.waitFor(() => expect(screen.getByText("2")).toBeTruthy());
-  expect(screen.getByText("Tarea completada.")).toBeTruthy();
-  await user.press(screen.getByRole("button", { name: "Cerrar notificación" }));
-  await vi.waitFor(
-    () => expect(screen.queryByText("Tarea completada.")).toBeNull(),
-    { timeout: 4500 },
-  );
-  expect(storage.write).toHaveBeenCalledWith(
-    "preview.tasks.v1",
-    expect.arrayContaining([
-      expect.objectContaining({ id: "estimate", done: true }),
-    ]),
-  );
-});
-
-test("conserva la tarea pendiente cuando falla el guardado", async () => {
-  const { user } = await setup(true);
-  await user.press(
-    screen.getByRole("checkbox", { name: "Preparar presupuesto" }),
-  );
-  await vi.waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
-  expect(screen.getByText("3")).toBeTruthy();
 });
 
 test("conecta los CRUD reales al storage y conserva formularios al cambiar de pestaña", async () => {
@@ -104,8 +90,7 @@ test("conecta los CRUD reales al storage y conserva formularios al cambiar de pe
   );
   await user.press(screen.getByRole("button", { name: "Agregar cliente" }));
   await fireEvent.changeText(screen.getByLabelText("Nombre *"), "Cliente real");
-  await user.press(screen.getByRole("tab", { name: "Inicio" }));
-  await user.press(screen.getByRole("tab", { name: "Clientes" }));
+  expect(screen.queryByRole("tab", { name: "Inicio" })).toBeNull();
   expect(screen.getByDisplayValue("Cliente real")).toBeTruthy();
   await vi.waitFor(() =>
     expect(
@@ -120,6 +105,7 @@ test("conecta los CRUD reales al storage y conserva formularios al cambiar de pe
   expect(records.get("customers.v1")).toEqual([
     expect.objectContaining({ name: "Cliente real" }),
   ]);
+  await user.press(screen.getByRole("button", { name: "Volver a clientes" }));
   await user.press(screen.getByRole("tab", { name: "Presupuestos" }));
   await vi.waitFor(() =>
     expect(screen.queryByText("Cargando presupuestos…")).toBeNull(),
@@ -137,16 +123,14 @@ test("conecta los CRUD reales al storage y conserva formularios al cambiar de pe
     screen.getByLabelText("Descripción del trabajo *"),
     "Reparación",
   );
-  await user.press(screen.getByRole("button", { name: "Agregar ítem" }));
+  await user.press(screen.getByRole("button", { name: "Agregar material" }));
+  await fireEvent.changeText(screen.getByLabelText("Material *"), "Materiales");
   await fireEvent.changeText(
-    screen.getByLabelText("Descripción del ítem 1"),
-    "Materiales",
-  );
-  await fireEvent.changeText(
-    screen.getByLabelText("Precio unitario del ítem 1"),
+    screen.getByLabelText("Precio por unidad *"),
     "1250,50",
   );
-  await user.press(screen.getByRole("button", { name: "Guardar presupuesto" }));
+  await user.press(screen.getByRole("button", { name: "Agregar" }));
+  await user.press(screen.getByRole("button", { name: "Revisar presupuesto" }));
   await vi.waitFor(() =>
     expect(screen.getByText("Detalle del presupuesto")).toBeTruthy(),
   );
@@ -160,7 +144,7 @@ test("conecta los CRUD reales al storage y conserva formularios al cambiar de pe
   expect(records.get("estimates.v1")).toEqual([]);
 });
 
-test("Mi negocio guarda el perfil y vuelve al formulario de cliente sin perder su borrador", async () => {
+test("el menú abre el perfil y guarda los datos del negocio", async () => {
   const { user, storage } = await setup();
   await user.press(screen.getByRole("tab", { name: "Clientes" }));
   await vi.waitFor(() =>
@@ -171,7 +155,13 @@ test("Mi negocio guarda el perfil y vuelve al formulario de cliente sin perder s
     screen.getByLabelText("Nombre *"),
     "Cliente pendiente",
   );
-  await user.press(screen.getByRole("button", { name: "Mi negocio" }));
+  await user.press(screen.getByRole("button", { name: "Guardar cliente" }));
+  await vi.waitFor(() =>
+    expect(screen.getByText("Detalle del cliente")).toBeTruthy(),
+  );
+  await user.press(screen.getByRole("button", { name: "Volver a clientes" }));
+  await user.press(screen.getByRole("button", { name: "Abrir menú" }));
+  await user.press(screen.getByRole("button", { name: "Datos del negocio" }));
   await vi.waitFor(() =>
     expect(screen.queryByText("Cargando tus datos…")).toBeNull(),
   );
@@ -189,7 +179,5 @@ test("Mi negocio guarda el perfil y vuelve al formulario de cliente sin perder s
   await user.press(
     screen.getByRole("button", { name: "Volver desde Mi negocio" }),
   );
-  expect(screen.getByLabelText("Nombre *").props["text"]).toBe(
-    "Cliente pendiente",
-  );
+  expect(screen.getByRole("tab", { name: "Clientes" })).toBeTruthy();
 });

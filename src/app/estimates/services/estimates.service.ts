@@ -25,17 +25,22 @@ export class EstimatesService {
   async getById(id: string): Promise<Estimate | undefined> {
     return (await this.getAll()).find((estimate) => estimate.id === id);
   }
-  async create(input: EstimateInput): Promise<Estimate> {
+  async create(input: EstimateInput, stableId?: string): Promise<Estimate> {
+    if (stableId) assertUuid(stableId);
     const data = await this.prepare(input);
     const now = new Date().toISOString();
     const estimate: Estimate = {
       ...data,
-      id: await this.ids.create(),
+      id: stableId ?? (await this.ids.create()),
       createdAt: now,
       updatedAt: now,
       status: EstimateStatus.Draft,
     };
     await this.storage.update<Estimate[]>(STORAGE_KEY, (current) => {
+      if (current?.some((record) => record.id === estimate.id))
+        throw new Error(
+          "El presupuesto ya existe. Volvé a abrirlo desde la lista.",
+        );
       this.checkNumber(current ?? [], estimate.number);
       return [...(current ?? []), estimate];
     });
@@ -72,7 +77,7 @@ export class EstimatesService {
       if (!allowed.includes(status))
         throw new Error("Cambio de estado inválido.");
       if (!estimate.items.length)
-        throw new Error("Agregá al menos un ítem antes de enviar.");
+        throw new Error("Agregá al menos un material o tarea antes de enviar.");
       return current!.map((value) =>
         value.id === id
           ? { ...value, status, updatedAt: new Date().toISOString() }
@@ -125,7 +130,7 @@ export class EstimatesService {
           !Object.values(EstimateItemType).includes(item.type) ||
           !Object.values(MeasurementUnit).includes(item.unit)
         )
-          throw new Error("Ítem inválido.");
+          throw new Error("Material o tarea inválidos.");
         if (item.id) assertUuid(item.id);
         return {
           ...item,

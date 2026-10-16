@@ -1,15 +1,22 @@
+import { ShellService } from "./shared/services/shell.service";
+import { CustomersPageService } from "./customers/services/customers-page.service";
+import { EstimatesPageService } from "./estimates/services/estimates-page.service";
+import type { Estimate } from "./estimates/models/estimate.model";
+import { ActionButtonComponent } from "./shared/components/action-button/action-button.component";
+import { PageLayoutComponent } from "./shared/components/page-layout/page-layout.component";
 import { BusinessPageComponent } from "./business/pages/business-page.component";
 import { BusinessPageService } from "./business/services/business-page.service";
 import { IconComponent } from "./shared/components/icon/icon.component";
-import { Component, inject, signal } from "@angular/core";
+import { Component, inject, signal, computed, DestroyRef } from "@angular/core";
 import {
+  Modal,
   Pressable,
   SafeAreaProvider,
   SafeAreaView,
-  ScrollView,
   Text,
   View,
 } from "@ng-native/components";
+import { HardwareBack } from "@ng-native/device";
 import { StatusBar } from "@ng-native/device";
 import { HomeComponent } from "./features/home/home.component";
 
@@ -22,12 +29,14 @@ type Tab = "customers" | "home" | "estimates";
 
 @Component({
   imports: [
+    Modal,
     Pressable,
     IconComponent,
     BusinessPageComponent,
+    ActionButtonComponent,
+    PageLayoutComponent,
     SafeAreaProvider,
     SafeAreaView,
-    ScrollView,
     Text,
     View,
     HomeComponent,
@@ -39,40 +48,42 @@ type Tab = "customers" | "home" | "estimates";
   template: `
     <safe-area-provider>
       <safe-area-view class="app-screen flex-1">
-        <view
-          class="app-header flex-row items-center justify-between px-6 py-4"
-        >
-          <view class="flex-row items-center gap-3">
-            <view class="brand-mark items-center justify-center"
-              ><text class="brand-initial">n</text></view
-            >
-            <text class="brand-name">nora</text>
-          </view>
-          <pressable
-            class="header-settings items-center justify-center"
-            accessibilityRole="button"
-            accessibilityLabel="Mi negocio"
-            [disabled]="business.visible()"
-            (press)="business.open()"
-          >
-            <nora-icon name="bootstrapGear" [size]="24" />
-          </pressable>
-        </view>
         <view class="flex-1">
-          @if (business.visible()) {
+          @if (shell.information()) {
+            <nora-page-layout
+              [title]="
+                shell.information() === 'help' ? 'Ayuda' : 'Acerca de Nora'
+              "
+              backLabel="Volver"
+              (back)="shell.information.set(null)"
+            >
+              @if (shell.information() === "help") {
+                <text class="body-text"
+                  >Tus clientes y presupuestos se guardan en este teléfono. El
+                  guardado local no es una copia de seguridad.</text
+                >
+                <text class="body-text"
+                  >Revisá el presupuesto antes de compartir el PDF. Compartir no
+                  confirma entrega ni cambia su estado.</text
+                >
+              } @else {
+                <text class="section-title">Nora · 1.0.0</text>
+                <text class="body-text">Un poco de orden para tu trabajo.</text>
+                <text class="muted"
+                  >Una herramienta offline para clientes y presupuestos.</text
+                >
+              }
+            </nora-page-layout>
+          } @else if (business.visible()) {
             <nora-business />
           } @else {
             @switch (tab()) {
               @case ("home") {
-                <scroll-view
-                  class="flex-1"
-                  [contentContainerStyle]="{
-                    padding: 24,
-                    paddingTop: 12,
-                    paddingBottom: 28,
-                  }"
-                  ><nora-home
-                /></scroll-view>
+                <nora-home
+                  (listed)="showEstimates($event)"
+                  (created)="newEstimate()"
+                  (opened)="openEstimate($event)"
+                />
               }
               @case ("customers") {
                 <nora-customers />
@@ -84,7 +95,7 @@ type Tab = "customers" | "home" | "estimates";
           }
         </view>
         <nora-toast />
-        @if (!business.visible()) {
+        @if (showTabs()) {
           <view class="tab-bar flex-row items-center px-3 py-2">
             @for (item of tabs; track item.id) {
               <pressable
@@ -95,11 +106,10 @@ type Tab = "customers" | "home" | "estimates";
                 class="tab-item flex-1 items-center justify-center gap-1"
                 [class.tab-item-active]="tab() === item.id"
               >
-                <text
-                  class="tab-symbol"
-                  [class.tab-text-active]="tab() === item.id"
-                  >{{ item.symbol }}</text
-                >
+                <nora-icon
+                  [name]="item.icon"
+                  [color]="tab() === item.id ? '#17645B' : '#526071'"
+                />
                 <text
                   class="tab-label"
                   [class.tab-text-active]="tab() === item.id"
@@ -109,24 +119,115 @@ type Tab = "customers" | "home" | "estimates";
             }
           </view>
         }
+        <modal
+          [visible]="shell.menuOpen()"
+          [transparent]="true"
+          animationType="none"
+          (requestClose)="shell.menuOpen.set(false)"
+        >
+          @if (shell.menuOpen()) {
+            <view class="drawer-scrim">
+              <pressable
+                class="flex-1"
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar menú"
+                (press)="shell.menuOpen.set(false)"
+              />
+              <safe-area-view
+                class="drawer-panel"
+                animate.enter="drawer-enter"
+                [accessibilityViewIsModal]="true"
+              >
+                <text class="heading">Menú</text>
+                <nora-button
+                  text="Cerrar menú"
+                  (pressed)="shell.menuOpen.set(false)"
+                />
+                <text class="section-title">Nora</text
+                ><text class="muted">Un poco de orden para tu trabajo.</text>
+                <nora-button
+                  text="Datos del negocio"
+                  (pressed)="openBusiness()"
+                />
+                <nora-button text="Ayuda" (pressed)="openInformation('help')" />
+                <nora-button
+                  text="Acerca de Nora"
+                  (pressed)="openInformation('about')"
+                />
+              </safe-area-view>
+            </view>
+          }
+        </modal>
       </safe-area-view>
     </safe-area-provider>
   `,
   styles: ":host { flex: 1; }",
 })
 export class App {
+  protected readonly shell = inject(ShellService);
+  protected readonly customers = inject(CustomersPageService);
+  protected readonly estimates = inject(EstimatesPageService);
+  protected readonly showTabs = computed(
+    () =>
+      !this.business.visible() &&
+      !this.shell.information() &&
+      (this.tab() === "home" ||
+        (this.tab() === "customers"
+          ? this.customers.screen() === "list"
+          : this.estimates.screen() === "list")),
+  );
+  protected openBusiness(): void {
+    this.shell.menuOpen.set(false);
+    void this.business.open();
+  }
+  protected openInformation(value: "help" | "about"): void {
+    this.shell.menuOpen.set(false);
+    this.shell.information.set(value);
+  }
+  protected async showEstimates(status: "draft" | "sent"): Promise<void> {
+    this.tab.set("estimates");
+    await this.estimates.enter();
+    this.estimates.statusFilter.set(status);
+  }
+  protected async newEstimate(): Promise<void> {
+    this.tab.set("estimates");
+    await this.estimates.enter();
+    this.estimates.create();
+  }
+  protected async openEstimate(value: Estimate): Promise<void> {
+    this.tab.set("estimates");
+    await this.estimates.enter();
+    this.estimates.open(value);
+  }
   protected readonly business = inject(BusinessPageService);
   protected readonly tab = signal<Tab>("home");
   protected readonly tabs: readonly {
     id: Tab;
     label: string;
-    symbol: string;
+    icon: "bootstrapPeople" | "bootstrapHouseDoor" | "bootstrapFileEarmarkText";
   }[] = [
-    { id: "customers", label: "Clientes", symbol: "♙" },
-    { id: "home", label: "Inicio", symbol: "⌂" },
-    { id: "estimates", label: "Presupuestos", symbol: "▤" },
+    { id: "customers", label: "Clientes", icon: "bootstrapPeople" },
+    { id: "home", label: "Inicio", icon: "bootstrapHouseDoor" },
+    {
+      id: "estimates",
+      label: "Presupuestos",
+      icon: "bootstrapFileEarmarkText",
+    },
   ];
   constructor() {
+    inject(DestroyRef).onDestroy(
+      inject(HardwareBack).handle(() => {
+        if (this.shell.menuOpen()) {
+          this.shell.menuOpen.set(false);
+          return true;
+        }
+        if (this.shell.information()) {
+          this.shell.information.set(null);
+          return true;
+        }
+        return false;
+      }),
+    );
     inject(StatusBar).set({ style: "dark" });
   }
 }

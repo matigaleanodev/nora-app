@@ -14,7 +14,7 @@ import { BusinessPageService } from "../services/business-page.service";
     BusinessFormComponent,
   ],
   template: `<nora-page-layout
-    title="Mi negocio"
+    title="Datos de mi negocio"
     eyebrow="TUS DATOS"
     backLabel="Volver desde Mi negocio"
     [busy]="vm.busy() || vm.loading()"
@@ -33,7 +33,7 @@ import { BusinessPageService } from "../services/business-page.service";
     @if (vm.blocked() && !vm.loading() && !vm.busy()) {
       <nora-button text="Reintentar carga" (pressed)="vm.load()" />
     }
-    <view page-footer class="form-footer px-6 py-3">
+    <view page-footer class="form-footer px-4 py-3">
       <nora-button
         variant="primary"
         [text]="vm.busy() ? 'Guardando…' : 'Guardar datos'"

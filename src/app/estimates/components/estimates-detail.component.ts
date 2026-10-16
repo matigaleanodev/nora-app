@@ -1,5 +1,5 @@
 import { CalendarDatePipe } from "../../shared/pipes/calendar-date.pipe";
-import { Component, input, output } from "@angular/core";
+import { Component, computed, input, output } from "@angular/core";
 import { Text, View } from "@ng-native/components";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
 import { MoneyPipe } from "../../shared/pipes/money.pipe";
@@ -19,7 +19,7 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
     EstimateItemCardComponent,
   ],
   template: `<view class="gap-4">
-    <view class="task-card rounded-2xl p-5 gap-3">
+    <view class="task-card rounded-lg p-4 gap-3">
       <text class="section-title">{{ estimate().number }}</text
       ><text class="example-badge"
         >{{ statusLabels()[estimate().status] }} ·
@@ -47,13 +47,27 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
     @if (estimate().customerSnapshot.address; as address) {
       <nora-address-card [address]="address" />
     }
-    <text class="section-title">Detalle del trabajo</text>
-    @for (row of items(); track row.item.id) {
-      <nora-estimate-item-card [row]="row" [currency]="estimate().currency" />
-    } @empty {
-      <text class="muted">Borrador sin ítems.</text>
+    <text class="section-title">Materiales y mano de obra</text>
+    @for (group of groups(); track group.type) {
+      @if (group.rows.length) {
+        <text class="section-title">{{
+          group.type === "material" ? "Materiales" : "Mano de obra"
+        }}</text>
+        @for (row of group.rows; track row.item.id) {
+          <nora-estimate-item-card
+            [row]="row"
+            [currency]="estimate().currency"
+          />
+        }
+        <text class="muted"
+          >Subtotal {{ group.subtotal | money: estimate().currency }}</text
+        >
+      }
     }
-    <view class="summary-card rounded-2xl p-5 gap-2"
+    @if (!items().length) {
+      <text class="muted">Borrador sin materiales ni tareas.</text>
+    }
+    <view class="summary-card rounded-lg p-4 gap-2"
       ><text class="summary-label">TOTAL · {{ estimate().currency }}</text
       ><text class="summary-amount">{{
         total() | money: estimate().currency
@@ -94,6 +108,16 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
   </view>`,
 })
 export class EstimatesDetailComponent {
+  protected readonly groups = computed(() =>
+    ["material", "labor"].map((type) => {
+      const rows = this.items().filter((row) => row.item.type === type);
+      return {
+        type,
+        rows,
+        subtotal: rows.reduce((sum, row) => sum + row.subtotalCents, 0),
+      };
+    }),
+  );
   readonly estimate = input.required<Estimate>();
   readonly items = input.required<readonly EstimateItemRow[]>();
   readonly total = input.required<number>();
