@@ -4,6 +4,7 @@ import { expect, test, vi } from "vitest";
 import { EstimatesPageComponent } from "./estimates-page.component";
 import { EstimatesService } from "../services/estimates.service";
 import { EstimatesPageService } from "../services/estimates-page.service";
+import { EstimatePdfService } from "../services/estimate-pdf.service";
 import { CustomersService } from "../../customers/services/customers.service";
 import { NotificationService } from "../../shared/services/notification.service";
 import {
@@ -30,11 +31,13 @@ async function setup(
   const customers = {
     getAll: vi.fn().mockResolvedValue(hasCustomers ? [customerFixture] : []),
   };
+  const pdf = { share: vi.fn().mockResolvedValue(undefined) };
   const confirm = vi.fn().mockResolvedValue(true);
   const notifications = { success: vi.fn(), danger: vi.fn(), warning: vi.fn() };
   const result = await render(EstimatesPageComponent, {
     providers: [
       { provide: EstimatesService, useValue: estimates },
+      { provide: EstimatePdfService, useValue: pdf },
       { provide: CustomersService, useValue: customers },
       { provide: Dialogs, useValue: { confirm } },
       { provide: NotificationService, useValue: notifications },
@@ -45,6 +48,7 @@ async function setup(
   await result.detectChanges();
   return {
     estimates,
+    pdf,
     customers,
     confirm,
     notifications,
@@ -212,4 +216,53 @@ test("marcar como enviado confirma el bloqueo de edición y actualiza las accion
   expect(
     screen.queryByRole("button", { name: "Editar presupuesto" }),
   ).toBeNull();
+});
+
+test("compartir el PDF delega la copia guardada sin marcar el presupuesto como enviado", async () => {
+  const { user, pdf, estimates, notifications } = await setup();
+  await user.press(
+    screen.getByRole("button", { name: "Ver presupuesto P-001" }),
+  );
+  await user.press(screen.getByRole("button", { name: "Compartir PDF" }));
+  expect(pdf.share).toHaveBeenCalledWith(estimateFixture);
+  expect(estimates.setStatus).not.toHaveBeenCalled();
+  expect(notifications.success).not.toHaveBeenCalled();
+});
+test("un error al compartir da feedback y permite reintentar sin perder el detalle", async () => {
+  const { user, pdf, notifications, vm } = await setup();
+  pdf.share.mockRejectedValueOnce(new Error("Completá Mi negocio."));
+  await user.press(
+    screen.getByRole("button", { name: "Ver presupuesto P-001" }),
+  );
+  await user.press(screen.getByRole("button", { name: "Compartir PDF" }));
+  expect(notifications.danger).toHaveBeenCalledWith("Completá Mi negocio.");
+  expect(vm.screen()).toBe("detail");
+  expect(vm.busy()).toBe(false);
+  await user.press(screen.getByRole("button", { name: "Compartir PDF" }));
+  expect(pdf.share).toHaveBeenCalledTimes(2);
+  expect(vm.error()).toBe("");
+});
+test("mientras se prepara o comparte el PDF bloquea acciones y evita dobles solicitudes", async () => {
+  const { user, pdf, vm, result } = await setup();
+  let finish!: () => void;
+  pdf.share.mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  await user.press(
+    screen.getByRole("button", { name: "Ver presupuesto P-001" }),
+  );
+  const pending = vm.sharePdf();
+  await result.detectChanges();
+  expect(screen.getByText("Preparando…")).toBeTruthy();
+  expect(vm.busy()).toBe(true);
+  await vm.sharePdf();
+  await vm.back();
+  expect(pdf.share).toHaveBeenCalledOnce();
+  expect(vm.screen()).toBe("detail");
+  finish();
+  await pending;
+  expect(vm.busy()).toBe(false);
 });
