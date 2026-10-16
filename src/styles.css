@@ -3,6 +3,8 @@
 @source "./app";
 @source not "./app/**/*.test.ts";
 @source not "./app/shared/testing";
+/* El HTML de impresión usa CSS web y no pertenece a las vistas nativas. */
+@source not "./app/estimates/utils/estimate-pdf.ts";
 @source not inline("visible");
 @import "@ng-native/tailwind/native.css";
 

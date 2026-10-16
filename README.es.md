@@ -42,7 +42,7 @@ Carpetas por dominio como en los otros Angular: `customers/models`, `customers/s
 
 Clientes con nombre, teléfono argentino opcional (código de área sin 0, número sin 15, diez dígitos combinados, formato fijo +549 e indicador WhatsApp), múltiples direcciones con nombre, email y notas opcionales. Clientes, direcciones, ítems y presupuestos usan UUID; Expo Crypto genera UUID v4. Los clientes se archivan/restauran en lugar de eliminarse para preservar referencias. Nombre y nombre visible de dirección obligatorios; los demás campos de dirección pueden quedar incompletos.
 
-Presupuestos con referencia al cliente y dirección opcional, número visible único ingresado por el usuario, descripción, ítems de materiales/mano de obra, ARS/USD, vigencia opcional (YYYY-MM-DD) y notas públicas. Unidades: m, m², m³, litros, unidades, horas y trabajo completo. Los borradores admiten lista vacía; enviar requiere al menos un ítem. Se pueden editar/eliminar borradores; luego pasan a enviado y aceptado/rechazado. Al guardar el borrador se copia el cliente/dirección; esa copia queda fija al enviarlo. Editar el cliente después no reescribe presupuestos. Sin conversión de moneda, impuestos, descuentos, PDF ni integración de envío; el estado sólo registra seguimiento local.
+Presupuestos con referencia al cliente y dirección opcional, número visible único ingresado por el usuario, descripción, ítems de materiales/mano de obra, ARS/USD, vigencia opcional (YYYY-MM-DD) y notas públicas. Unidades: m, m², m³, litros, unidades, horas y trabajo completo. Los borradores admiten lista vacía; enviar requiere al menos un ítem. Se pueden editar/eliminar borradores; luego pasan a enviado y aceptado/rechazado. Al guardar el borrador se copia el cliente/dirección; esa copia queda fija al enviarlo. Editar el cliente después no reescribe presupuestos. Sin conversión de moneda, impuestos ni descuentos; PDF/compartir disponible y estado sólo para seguimiento local.
 
 Precios en centavos enteros no negativos. Cantidades positivas, máximo 1.000.000, hasta tres decimales. Cada subtotal redondea mitades hacia arriba a centavos mediante aritmética entera; el total suma subtotales redondeados, con límites de enteros seguros. Los totales se calculan, no se guardan. Claves JSON SQLite versionadas `customers.v1` y `estimates.v1` sobre storage existente; operaciones de lectura/modificación/escritura serializadas dentro del proceso, recuperables tras errores. No es sincronización entre procesos ni backup remoto. Futuros esquemas requieren migración explícita.
 
@@ -54,7 +54,7 @@ Validación: typecheck y suite actual correctos (interacciones nativas y dominio
 
 ## Pruebas unitarias
 
-Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 158 casos correctos en veinticinco archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite y Expo Crypto están simulados: esta suite no demuestra ejecución nativa de la base ni del generador aleatorio. `npm run typecheck` también correcto.
+Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 186 casos correctos en veintisiete archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite, Expo Crypto, Print, Sharing y FileSystem están simulados: esta suite no demuestra su ejecución nativa en el teléfono. `npm run typecheck` también correcto.
 
 ## Formato
 
@@ -66,7 +66,7 @@ Los componentes de página sólo enlazan signals y llaman servicios. `CustomersP
 
 Formularios con direcciones múltiples e ítems de materiales/mano de obra, cantidad, unidad y precio unitario. Guardar queda fuera del scroll; adaptación al teclado y Atrás Android mediante APIs nativas oficiales. Precios admiten coma o punto decimal, hasta dos decimales y sin separadores de miles. El pipe `money` muestra centavos como `$` (ARS) o `US$` (USD), con formato argentino. Cantidades de tres decimales; parciales y totales usan las mismas reglas del dominio. Cambiar moneda no convierte precios existentes.
 
-Crear un cliente primero; después preparar el presupuesto, seleccionar cliente/dirección y agregar ítems. Los borradores admiten lista de ítems vacía. Estados de presupuesto sólo para seguimiento local; PDF y envío pendientes. Listas con scroll para el primer conjunto pequeño offline; se pueden virtualizar al crecer el volumen.
+Crear un cliente primero; después preparar el presupuesto, seleccionar cliente/dirección y agregar ítems. Los borradores admiten lista de ítems vacía. Estados de presupuesto sólo para seguimiento local; compartir PDF es una acción independiente y no confirma entrega. Listas con scroll para el primer conjunto pequeño offline; se pueden virtualizar al crecer el volumen.
 
 Validación con interacciones de componentes, tests de dominio, flujo CRUD completo con storage simulado, conservación de formularios entre tabs, fuente simulada de Atrás nativo, formato monetario y conversión decimal. Export Android correcto; no se instaló ni probó el nuevo CRUD en teléfono durante esta iteración.
 
@@ -88,7 +88,7 @@ Estado GitHub verificado al 2026-10-09: dev remota creada desde main. main exige
 
 El engranaje del header abre el perfil del prestador: nombre o nombre comercial obligatorio, teléfono argentino, email y logo opcionales. Se guarda localmente en SQLite bajo `business-profile.v1`; el logo se copia al directorio privado durable `business-logos` al guardar. Admite JPG, PNG y WebP de hasta 5 MB. Cancelar la selección conserva el logo anterior; reemplazarlo elimina la copia anterior sólo después de guardar correctamente. Los originales de la galería se conservan.
 
-Los componentes de contacto se comparten con clientes. Los servicios separan validación/persistencia, archivos nativos y estado de pantalla. Volver confirma cambios sin guardar y conserva la pantalla anterior. El perfil prepara los futuros documentos; esta iteración todavía no genera PDF.
+Los componentes de contacto se comparten con clientes. Los servicios separan validación/persistencia, archivos nativos y estado de pantalla. Volver confirma cambios sin guardar y conserva la pantalla anterior. El perfil actual aporta nombre, contacto y logo opcional del prestador para generar el PDF.
 
 Validación: 158 tests en 25 archivos, typecheck y export Android correctos. Falta probar selección del logo y persistencia del perfil/logo al reiniciar Expo Go en el teléfono.
 
@@ -97,3 +97,13 @@ Validación: 158 tests en 25 archivos, typecheck y export Android correctos. Fal
 Seguir de cerca Angular Native es una finalidad principal de este repositorio. Actualizar sus paquetes juntos en una rama feat dedicada con el migrador oficial, revisar releases y notas de migración, y verificar tipos, tests, formato y export Android. Antes del merge, probar formularios, teclado, navegación, modales, toasts y persistencia local en el teléfono. La migración 0.7.0 → 0.13.0 sólo cambió versiones de paquetes; Expo, React Native y Angular conservan sus líneas actuales. La integración del inspector queda como otro incremento.
 
 Validación del 2026-10-14: tipos, 158 tests, formato y export Android correctos con 0.13.0. Falta la prueba de regresión en teléfono.
+
+## PDF del presupuesto y compartir
+
+Desde el detalle de un presupuesto guardado, **Compartir PDF** genera un documento A4 offline mediante `expo-print` y abre el menú nativo de Android con `expo-sharing`. Primero completar el nombre obligatorio en Mi negocio. El documento incluye snapshot del cliente/dirección, perfil actual del negocio y logo opcional incrustado, descripción, materiales/mano de obra con cantidades/unidades, precios, parciales, total, ARS/USD, vigencia dd/MM/yyyy y notas públicas. Los borradores salen marcados BORRADOR, incluso si no tienen ítems. Los cálculos del dominio conservan el mismo redondeo en centavos de la app. Los textos se escapan y el documento no carga recursos externos.
+
+`EstimatePdfService` resuelve generación/archivos/share nativos; la plantilla HTML es una utilidad pura y los componentes sólo emiten acciones al servicio de página. Una copia privada con nombre único queda en `cache/estimate-pdfs` para que la app receptora termine de leerla. Nuevas exportaciones limpian las copias de más de 24 horas; el sistema puede liberar la caché antes. Esto no es backup ni archivo documental permanente. Los datos del prestador se leen al exportar; no son un snapshot histórico inmutable.
+
+Compartir no elige el contacto de WhatsApp, no confirma entrega ni cambia el estado. Elegir app/contacto y marcar como enviado son acciones separadas. Un error conserva el detalle y permite reintentar; mientras está ocupado se bloquean solicitudes repetidas.
+
+Validación: 186 tests en 27 archivos, tipos, formato y export Android correctos. Muestras PDF de Chromium revisadas visualmente con una página, 100 ítems y notas/descripciones extensas. Falta validar impresión, logo, paginación y compartir a otra app en Expo Go/Android real.

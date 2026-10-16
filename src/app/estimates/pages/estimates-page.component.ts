@@ -52,6 +52,7 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
               [statusLabels]="vm.statusLabels"
               [nextStatuses]="vm.nextStatuses()"
               [busy]="vm.busy()"
+              (pdfShared)="vm.sharePdf()"
               (edit)="vm.edit()"
               (deleted)="vm.delete()"
               (statusChanged)="vm.changeStatus($event)"

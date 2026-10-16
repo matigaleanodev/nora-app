@@ -59,9 +59,16 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
         total() | money: estimate().currency
       }}</text></view
     >
+    <nora-button
+      variant="primary"
+      label="Compartir PDF"
+      [text]="busy() ? 'Preparando…' : 'Compartir PDF'"
+      [disabled]="busy()"
+      (pressed)="pdfShared.emit()"
+    />
     @if (estimate().status === "draft") {
       <nora-button
-        variant="primary"
+        variant="secondary"
         text="Editar presupuesto"
         [disabled]="busy()"
         (pressed)="edit.emit()"
@@ -81,8 +88,8 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
       />
     }
     <text class="footnote"
-      >Los estados sólo registran el seguimiento. Por ahora no generan PDF ni
-      envían mensajes.</text
+      >Compartir abre el menú de Android y no cambia el estado. Marcá como
+      enviado cuando hayas entregado el presupuesto.</text
     >
   </view>`,
 })
@@ -93,6 +100,7 @@ export class EstimatesDetailComponent {
   readonly statusLabels = input.required<Record<EstimateStatus, string>>();
   readonly nextStatuses = input.required<readonly EstimateStatus[]>();
   readonly busy = input(false);
+  readonly pdfShared = output<void>();
   readonly edit = output<void>();
   readonly deleted = output<void>();
   readonly statusChanged = output<EstimateStatus>();
