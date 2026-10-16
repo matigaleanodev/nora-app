@@ -8,7 +8,7 @@ import { NotificationService } from "../../services/notification.service";
   template: `
     @if (notifications.toast(); as toast) {
       <view
-        class="toast-card flex-row items-center gap-3 p-3 rounded-2xl"
+        class="toast-card flex-row items-center gap-3 p-3 rounded-lg"
         animate.enter="toast-enter"
         animate.leave="toast-leave"
         [class.toast-success]="toast.variant === 'success'"

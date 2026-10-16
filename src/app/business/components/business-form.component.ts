@@ -34,7 +34,7 @@ import type { BusinessForm } from "../models/business-profile.model";
     />
     <text class="section-title">Logo opcional</text>
     @if (form().logo; as logo) {
-      <view class="task-card rounded-2xl p-4 items-center">
+      <view class="task-card rounded-lg p-4 items-center">
         <image
           [source]="{ uri: logo.uri }"
           resizeMode="contain"

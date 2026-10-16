@@ -6,7 +6,7 @@ import type { Currency } from "../models/estimate.model";
 @Component({
   selector: "nora-estimate-item-card",
   imports: [Text, View, MoneyPipe],
-  template: `<view class="task-card rounded-2xl p-4 gap-2">
+  template: `<view class="compact-row gap-2">
     <text class="task-category">{{
       row().item.type === "material" ? "Material" : "Mano de obra"
     }}</text>

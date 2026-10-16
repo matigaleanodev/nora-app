@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "nora-app",
+    "name": "Nora",
     "slug": "nora-app",
     "version": "1.0.0",
     "platforms": ["android"],
@@ -9,9 +9,8 @@
     "userInterfaceStyle": "light",
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#17645B",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
@@ -33,7 +32,27 @@
           "microphonePermission": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/NotoSans.ttf",
+            "./assets/NotoSans-Medium.ttf",
+            "./assets/NotoSans-SemiBold.ttf",
+            "./assets/NotoSans-Bold.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      "expo-asset"
     ]
   }
 }

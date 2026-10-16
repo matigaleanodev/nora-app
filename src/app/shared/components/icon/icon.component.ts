@@ -7,6 +7,12 @@ import {
   bootstrapCheckLg,
   bootstrapPlusLg,
   bootstrapTrash3,
+  bootstrapList,
+  bootstrapPeople,
+  bootstrapHouseDoor,
+  bootstrapFileEarmarkText,
+  bootstrapArrowLeft,
+  bootstrapChevronRight,
   bootstrapGear,
 } from "@ng-icons/bootstrap-icons";
 
@@ -20,6 +26,12 @@ import {
       bootstrapCheckLg,
       bootstrapPlusLg,
       bootstrapTrash3,
+      bootstrapList,
+      bootstrapPeople,
+      bootstrapHouseDoor,
+      bootstrapFileEarmarkText,
+      bootstrapArrowLeft,
+      bootstrapChevronRight,
       bootstrapGear,
     }),
   ],
@@ -33,8 +45,14 @@ export class IconComponent {
     | "bootstrapCheckLg"
     | "bootstrapPlusLg"
     | "bootstrapTrash3"
+    | "bootstrapList"
+    | "bootstrapPeople"
+    | "bootstrapHouseDoor"
+    | "bootstrapFileEarmarkText"
+    | "bootstrapArrowLeft"
+    | "bootstrapChevronRight"
     | "bootstrapGear"
   >();
   readonly size = input(24);
-  readonly color = input("#64685c");
+  readonly color = input("#526071");
 }

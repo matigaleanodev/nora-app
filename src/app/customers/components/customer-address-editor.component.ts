@@ -7,7 +7,7 @@ export type AddressChanges = Partial<Omit<CustomerAddress, "id">>;
 @Component({
   selector: "nora-address-editor",
   imports: [Text, View, ActionButtonComponent, FormFieldComponent],
-  template: `<view class="task-card rounded-2xl p-4 gap-4">
+  template: `<view class="task-card rounded-lg p-4 gap-4">
     <text class="section-title">Dirección {{ index() + 1 }}</text>
     <nora-field
       label="Nombre de dirección *"

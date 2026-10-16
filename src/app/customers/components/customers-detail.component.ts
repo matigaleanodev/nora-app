@@ -7,7 +7,7 @@ import { CustomerAddressCardComponent } from "./customer-address-card.component"
   selector: "nora-customers-detail",
   imports: [Text, View, ActionButtonComponent, CustomerAddressCardComponent],
   template: `<view class="gap-4">
-    <view class="task-card rounded-2xl p-5 gap-4">
+    <view class="task-card rounded-lg p-4 gap-4">
       <text class="section-title">{{ customer().name }}</text
       ><text class="example-badge">{{
         customer().archived ? "ARCHIVADO" : "ACTIVO"

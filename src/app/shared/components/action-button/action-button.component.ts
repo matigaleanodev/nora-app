@@ -1,8 +1,9 @@
 import { Component, input, output, signal } from "@angular/core";
+import { IconComponent } from "../icon/icon.component";
 import { Pressable, Text } from "@ng-native/components";
 @Component({
   selector: "nora-button",
-  imports: [Pressable, Text],
+  imports: [Pressable, Text, IconComponent],
   template: `
     <pressable
       (pressIn)="isPressed.set(true)"
@@ -23,12 +24,18 @@ import { Pressable, Text } from "@ng-native/components";
       [class.back-button]="variant() === 'back'"
       [class.button-disabled]="disabled()"
     >
-      <text
-        [class.action-label]="variant() !== 'primary' && variant() !== 'danger'"
-        [class.primary-label]="variant() === 'primary'"
-        [class.danger-label]="variant() === 'danger'"
-        >{{ text() }}</text
-      >
+      @if (variant() === "back") {
+        <nora-icon name="bootstrapArrowLeft" />
+      } @else {
+        <text
+          [class.action-label]="
+            variant() !== 'primary' && variant() !== 'danger'
+          "
+          [class.primary-label]="variant() === 'primary'"
+          [class.danger-label]="variant() === 'danger'"
+          >{{ text() }}</text
+        >
+      }
     </pressable>
   `,
 })
