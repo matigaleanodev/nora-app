@@ -42,7 +42,7 @@ Domain folders follow the existing Angular projects: `customers/models`, `custom
 
 Customers support name, optional Argentina phone (area code without 0, subscriber number without 15, ten digits combined, fixed +549 formatting, WhatsApp flag), multiple named addresses, optional email and notes. Customer/address/item/estimate IDs use UUID; Expo Crypto generates UUID v4. Customers can be archived/restored rather than deleted, preserving references. Name and address display name are required; other address fields may remain incomplete.
 
-Estimates reference a customer and optional customer address, with a separate unique user-supplied display number, description, material/labor items, ARS/USD, optional validity date (YYYY-MM-DD) and public notes. Units: m, m², m³, liters, units, hours and complete job. Drafts may have no items; sending requires at least one. Drafts can be edited/deleted, then transition to sent and accepted/rejected. A customer/address snapshot is copied when saving a draft and remains unchanged once sent; later customer edits do not rewrite estimates. No currency conversion, tax, discount, PDF or sending integration is implemented; status is local tracking only.
+Estimates reference a customer and optional customer address, with a separate unique user-supplied display number, description, material/labor items, ARS/USD, optional validity date (YYYY-MM-DD) and public notes. Units: m, m², m³, liters, units, hours and complete job. Drafts may have no items; sending requires at least one. Drafts can be edited/deleted, then transition to sent and accepted/rejected. A customer/address snapshot is copied when saving a draft and remains unchanged once sent; later customer edits do not rewrite estimates. No currency conversion, tax or discount is implemented; PDF sharing is available and status is local tracking only.
 
 Prices are nonnegative integer cents. Quantities are positive, at most 1,000,000, with up to three decimals. Subtotals round half-up to cents using integer arithmetic; totals sum rounded subtotals with safe-integer limits. Totals are derived, not stored. Versioned SQLite JSON keys `customers.v1` and `estimates.v1` use the existing local storage service; read-modify-write operations are serialized in this app process, including recovery after errors. This is not multi-process synchronization or cloud backup. Future schemas require explicit migration.
 
@@ -54,7 +54,7 @@ Validation: typecheck and nine tests pass (native UI tests plus domain/persisten
 
 ## Unit tests
 
-Run `npm test` from Ubuntu/WSL. The suite currently has 158 passing cases across twenty-five files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite and Expo Crypto are mocked; this suite does not prove native database or random-generator execution. `npm run typecheck` also passes.
+Run `npm test` from Ubuntu/WSL. The suite currently has 186 passing cases across twenty-seven files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite, Expo Crypto, Print, Sharing and FileSystem are mocked; this suite does not prove their native device execution. `npm run typecheck` also passes.
 
 ## Formatting
 
@@ -66,7 +66,7 @@ Page components only bind signals and invoke services. `CustomersPageService` an
 
 Forms support multiple customer addresses and estimate items with material/labor, quantity, measurement unit and unit price. Save stays outside the scroll area; keyboard avoidance and Android back use official native APIs. Money input accepts comma or dot as decimal separator with at most two decimals and no thousands grouping. `money` formats stored cents as `$` (ARS) or `US$` (USD) using Argentine separators. Quantities accept three decimals; previews use the same domain subtotal/total rules. Currency selection does not convert existing prices.
 
-Create a customer first, then create an estimate, choose the customer/address and add items. Empty item lists are allowed for drafts. Estimate state changes are local tracking only; PDF generation and sending remain pending. Lists currently use scroll views for the first small offline dataset; virtualized lists can replace them as volume grows.
+Create a customer first, then create an estimate, choose the customer/address and add items. Empty item lists are allowed for drafts. Estimate state changes are local tracking only; PDF sharing is a separate action and does not confirm delivery. Lists currently use scroll views for the first small offline dataset; virtualized lists can replace them as volume grows.
 
 Validation includes component interactions, domain tests, a full mocked-storage CRUD flow, draft preservation across tabs, native-back source simulation, money formatting and decimal parsing. Android export succeeds; no new CRUD was installed or tested on a physical device during this iteration.
 
@@ -88,7 +88,7 @@ GitHub state verified on 2026-10-09: remote dev was created from main. main requ
 
 The header settings button opens the provider profile: required personal/business name, optional Argentine phone, email and logo. SQLite stores it under `business-profile.v1`; saving copies the logo into the durable private `business-logos` directory. Supported formats: JPG, PNG and WebP, up to 5 MB. Canceling selection preserves the previous logo; replacing it removes the old private copy only after a successful save. Gallery originals remain untouched.
 
-Contact fields are shared with customers. Separate services own validation/persistence, native files and page state. Back navigation confirms unsaved changes and preserves the previous screen. This profile prepares future documents; PDF generation is still pending.
+Contact fields are shared with customers. Separate services own validation/persistence, native files and page state. Back navigation confirms unsaved changes and preserves the previous screen. The current profile supplies the provider name, contact and optional logo for PDF generation.
 
 Validation: 158 tests across 25 files, typecheck and Android export pass. Logo selection and profile/logo persistence after restarting Expo Go still require device validation.
 
@@ -97,3 +97,13 @@ Validation: 158 tests across 25 files, typecheck and Android export pass. Logo s
 Following Angular Native closely is a primary purpose of this repository. Update its packages together on a dedicated feature branch using the official migrator, inspect release notes and migration notes, then verify types, tests, formatting and Android export. Physical-device checks cover forms, keyboard, navigation, modals, toasts and local persistence before merging. The 0.7.0 → 0.13.0 migration only changed package versions; Expo, React Native and Angular remain on their existing release lines. Inspector integration is a separate increment.
 
 Verification on 2026-10-14: typecheck, 158 tests, formatting and Android export pass on 0.13.0. Physical-device regression testing remains pending.
+
+## Estimate PDF and sharing
+
+From a saved estimate detail, **Compartir PDF** generates an A4 document offline with `expo-print` and opens Android sharing through `expo-sharing`. Complete the required provider name in Mi negocio first. The document contains the saved customer/address snapshot, the current business profile and optional embedded logo, work description, materials/labor with quantities and units, unit prices, subtotals, total, ARS/USD, validity in dd/MM/yyyy and public notes. Drafts are marked BORRADOR, including drafts without items. Domain calculations supply the same integer-cent rounding as the app. User text is escaped; the document loads no external assets.
+
+`EstimatePdfService` handles native generation/files/sharing; the HTML builder is a pure utility and components only emit actions to the page service. A private, uniquely named copy stays in `cache/estimate-pdfs` so the receiving app can finish reading it. Later exports remove copies older than 24 hours; the OS can reclaim cache earlier. This is not a backup or permanent document archive. Provider data is read at export time; it is not an immutable historical snapshot.
+
+Sharing does not select the WhatsApp contact, confirm delivery or change estimate status. Select the destination app/contact yourself and mark the estimate sent separately. An error preserves the detail and allows retry; double requests are blocked while busy.
+
+Validation: 186 tests across 27 files, typecheck, formatting and Android export pass. Chromium PDF samples were visually reviewed at one page, 100 items and with extensive notes/descriptions. Actual Expo Go printing, logo rendering, pagination and sharing to another Android app still require device validation.
