@@ -10,11 +10,11 @@ Completed file: [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3
 
 Three-page structure adapted to the current Figma plan's limit:
 
-| Page | Purpose |
-| --- | --- |
+| Page                       | Purpose                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------- |
 | 00 · Identidad y documento | Palette, typography, geometry, brand, shared rules, and client PDF reference |
-| 01 · Componentes | Buttons, fields, rows, states, and reusable elements |
-| 02 · Pantallas y flujos | Sections for the primary flow, recovery/states, and future proposals |
+| 01 · Componentes           | Buttons, fields, rows, states, and reusable elements                         |
+| 02 · Pantallas y flujos    | Sections for the primary flow, recovery/states, and future proposals         |
 
 In **02**, the primary flow includes Inicio/Mi negocio, clients, business data, and estimates; states cover empty screens, pending/failed saves, incomplete work, and recovery. The future section separates agenda, appearance, backup, and assistant concepts without implementation approval. This organization does not require a plan upgrade.
 

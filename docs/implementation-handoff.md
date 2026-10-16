@@ -13,18 +13,18 @@ Updated: 2026-10-16. This chat defines design and documentation; it does not imp
 
 **Figma completed and verified:** [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Contains 35 base views, two repeated-entry variants, and the editable A4 PDF; 133 connected controls have no invalid destinations. The main flow, drawer, states, components, and document were visually reviewed. The [kit guide](design-kit/README.md) explains its pages and navigation. Local HTML/JSON and the remote file are different deliverables; native validation belongs to the implementation chat.
 
-## Current state and target
+## Baseline at design handoff and target
 
-| Area | Implemented today | Target design |
-| --- | --- | --- |
-| Identity | Terracotta/olive, lowercase “nora” wordmark | P1 teal `#17645B`, Noto Sans, precise F1, “Nora” wordmark and n monogram |
-| Navigation | Clientes · Inicio · Presupuestos; global header and gear | Same three destinations; top-right trigger and right drawer; compact header and contextual back |
-| Inicio | Fictional example tasks | “Mi negocio”, real draft/sent summary and explicit business-data access |
-| Clients | List, detail, create/edit, and addresses | Same business contracts with compact accessible presentation |
-| Estimate | Inline line editors and manual save | Grouped compact list; dedicated material/labor editors; repeated entry and autosave |
-| Persistence | Validated `estimates.v1`, `customers.v1`, local profile | Preserve current data and add incomplete-work recovery without pretending it is a valid document |
-| Sharing | Offline PDF/native sheet, independent local statuses | Clear review before sharing, without automatically marking sent |
-| Startup | Current assets/configuration | Selected mark and brief microphone motion, subject to Android adaptation |
+| Area        | Implemented today                                        | Target design                                                                                    |
+| ----------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Identity    | Terracotta/olive, lowercase “nora” wordmark              | P1 teal `#17645B`, Noto Sans, precise F1, “Nora” wordmark and n monogram                         |
+| Navigation  | Clientes · Inicio · Presupuestos; global header and gear | Same three destinations; top-right trigger and right drawer; compact header and contextual back  |
+| Inicio      | Fictional example tasks                                  | “Mi negocio”, real draft/sent summary and explicit business-data access                          |
+| Clients     | List, detail, create/edit, and addresses                 | Same business contracts with compact accessible presentation                                     |
+| Estimate    | Inline line editors and manual save                      | Grouped compact list; dedicated material/labor editors; repeated entry and autosave              |
+| Persistence | Validated `estimates.v1`, `customers.v1`, local profile  | Preserve current data and add incomplete-work recovery without pretending it is a valid document |
+| Sharing     | Offline PDF/native sheet, independent local statuses     | Clear review before sharing, without automatically marking sent                                  |
+| Startup     | Current assets/configuration                             | Selected mark and brief microphone motion, subject to Android adaptation                         |
 
 Agenda, appearance, and other future mocks do not certify implementation. Production menus contain only available options and real content, without empty links.
 
@@ -69,3 +69,7 @@ Read `agents.md`, workspace rules, and roadmap when starting. Use Angular Native
 ## Suggested request for the next chat
 
 > Implement Nora's redesign in small increments using `docs/implementation-handoff.md`, the identity/UX guides, and `docs/design-kit/`. First inspect the current state and propose a complete first increment. Preserve local data and pre-existing changes. Do not commit or push automatically; verify types/tests and distinguish pending native validation. The client document is PDF; Excel is only a future possibility. Check Figma's documented status before claiming the prototype is complete.
+
+## Implementation started — 2026-10-16
+
+The implementation request for `feat/visual-identity` authorizes separate documentation and code commits. Current status, technical decisions and manual checks before publishing are maintained in [implementation status](implementation-status.md). Earlier content describes the delivered design baseline and does not limit this authorized implementation.

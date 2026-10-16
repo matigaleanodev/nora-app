@@ -13,18 +13,18 @@ Actualizado: 2026-10-16. Este hilo define diseño y documentación; no implement
 
 **Figma terminado y verificado:** [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Contiene 35 vistas base, dos variantes de carga repetida y el PDF A4 editable; 133 controles conectados sin destinos inválidos. Se revisaron visualmente el circuito principal, menú, estados, componentes y documento. La [guía del kit](design-kit/README.es.md) explica las páginas y cómo recorrerlo. El HTML/JSON local y el archivo remoto son entregables diferentes; la validación nativa corresponde al hilo de implementación.
 
-## Estado actual y objetivo
+## Base al entregar el diseño y objetivo
 
-| Área | Implementado hoy | Diseño objetivo |
-| --- | --- | --- |
-| Identidad | Terracota/oliva, marca tipográfica «nora» | P1 petróleo `#17645B`, Noto Sans, F1 precisa, firma «Nora» y monograma n |
-| Navegación | Clientes · Inicio · Presupuestos; header global con engranaje | Mismos tres destinos; menú superior derecho y drawer desde derecha; encabezado compacto y volver contextual |
-| Inicio | Tareas ficticias de ejemplo | «Mi negocio», resumen real de borradores/enviados y acceso explícito a sus datos |
-| Clientes | Lista, detalle, alta/edición y direcciones | Mismos contratos de negocio, interfaz compacta y accesible |
-| Presupuesto | Formulario con editores inline y guardado manual | Lista compacta agrupada; editores dedicados de material/mano de obra; carga repetida y autoguardado |
-| Persistencia | `estimates.v1` validado, `customers.v1`, perfil local | Conservar datos actuales y sumar recuperación de trabajo incompleto sin fingir documento válido |
-| Compartir | PDF offline y hoja nativa, estados locales separados | Revisión clara antes de compartir, sin marcar enviado automáticamente |
-| Arranque | Assets/configuración actuales | Marca elegida y movimiento breve del micrófono, sujeto a adaptación Android |
+| Área         | Implementado hoy                                              | Diseño objetivo                                                                                             |
+| ------------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Identidad    | Terracota/oliva, marca tipográfica «nora»                     | P1 petróleo `#17645B`, Noto Sans, F1 precisa, firma «Nora» y monograma n                                    |
+| Navegación   | Clientes · Inicio · Presupuestos; header global con engranaje | Mismos tres destinos; menú superior derecho y drawer desde derecha; encabezado compacto y volver contextual |
+| Inicio       | Tareas ficticias de ejemplo                                   | «Mi negocio», resumen real de borradores/enviados y acceso explícito a sus datos                            |
+| Clientes     | Lista, detalle, alta/edición y direcciones                    | Mismos contratos de negocio, interfaz compacta y accesible                                                  |
+| Presupuesto  | Formulario con editores inline y guardado manual              | Lista compacta agrupada; editores dedicados de material/mano de obra; carga repetida y autoguardado         |
+| Persistencia | `estimates.v1` validado, `customers.v1`, perfil local         | Conservar datos actuales y sumar recuperación de trabajo incompleto sin fingir documento válido             |
+| Compartir    | PDF offline y hoja nativa, estados locales separados          | Revisión clara antes de compartir, sin marcar enviado automáticamente                                       |
+| Arranque     | Assets/configuración actuales                                 | Marca elegida y movimiento breve del micrófono, sujeto a adaptación Android                                 |
 
 Los mocks de agenda, apariencia u otras funciones futuras no certifican implementación. En el menú de producción sólo se muestran opciones disponibles y contenido real, sin enlaces vacíos.
 
@@ -69,3 +69,7 @@ Leer `agents.md`, reglas de workspace y roadmap al comenzar. Trabajar con Angula
 ## Pedido sugerido para el próximo hilo
 
 > Implementemos el rediseño de Nora por cortes pequeños usando `docs/implementation-handoff.es.md`, las guías de identidad/UX y `docs/design-kit/`. Primero revisá el estado actual y proponé el primer corte completo. Preservá los datos locales y cambios preexistentes. No hagas commits ni pushes automáticos; verificá tipos/tests y distinguí validación nativa pendiente. El documento para cliente es PDF; Excel es sólo una posibilidad futura. Verificá el estado documentado de Figma antes de afirmar que el prototipo está terminado.
+
+## Implementación iniciada — 2026-10-16
+
+El pedido de implementación en `feat/visual-identity` autoriza los commits por bloques de documentación y código. El estado actual, las decisiones técnicas y la prueba manual previa a publicar se mantienen en [estado de implementación](implementation-status.es.md). El contenido anterior describe la base de diseño entregada, no limita esta implementación autorizada.

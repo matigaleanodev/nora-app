@@ -10,11 +10,11 @@ Archivo terminado: [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5Q
 
 Estructura de tres páginas, adaptada al límite del plan actual de Figma:
 
-| Página | Para qué sirve |
-| --- | --- |
+| Página                     | Para qué sirve                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------ |
 | 00 · Identidad y documento | Paleta, tipografía, geometría, marca, reglas comunes y referencia del documento PDF para cliente |
-| 01 · Componentes | Botones, campos, filas, estados y elementos reutilizables |
-| 02 · Pantallas y flujos | Secciones del circuito principal, estados/recuperación y propuestas futuras |
+| 01 · Componentes           | Botones, campos, filas, estados y elementos reutilizables                                        |
+| 02 · Pantallas y flujos    | Secciones del circuito principal, estados/recuperación y propuestas futuras                      |
 
 En **02**, el circuito principal incluye Inicio/Mi negocio, clientes, datos del negocio y presupuesto; los estados cubren vacíos, guardado pendiente/fallido, incompletos y recuperación. La sección futura separa agenda, apariencia, backup y asistente como conceptos sin implementación aprobada. No hace falta ampliar el plan para esta organización.
 
