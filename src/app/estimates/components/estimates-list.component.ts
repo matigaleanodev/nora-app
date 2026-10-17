@@ -56,17 +56,19 @@ import type { Estimate, EstimateStatus } from "../models/estimate.model";
               statusLabels()[row.estimate.status]
             }}</text></view
           >
-          <text class="muted">{{ row.estimate.description }}</text
-          ><text class="section-title">{{
-            row.totalCents | money: row.estimate.currency
-          }}</text>
+          <view class="flex-row items-start gap-3"
+            ><text class="footnote flex-1">{{ row.estimate.description }}</text
+            ><text class="task-title">{{
+              row.totalCents | money: row.estimate.currency
+            }}</text></view
+          >
         </pressable>
       } @empty {
         <view class="task-card rounded-lg p-6 gap-2"
           ><text class="section-title">Tus próximos trabajos empiezan acá.</text
           ><text class="muted"
-            >Primero agregá un cliente y después usá + para preparar su
-            presupuesto.</text
+            >Usá «Nuevo presupuesto» para empezar. Podés completar los datos
+            después.</text
           ></view
         >
       }

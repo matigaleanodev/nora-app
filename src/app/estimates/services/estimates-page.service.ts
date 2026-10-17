@@ -81,6 +81,7 @@ export class EstimatesPageService {
   readonly editor = signal<EstimateEditorRecovery | null>(null);
   readonly editorError = signal("");
   readonly editorVisible = signal(false);
+  readonly editingConditions = signal(false);
   readonly activeEditor = computed(() =>
     this.editorVisible() ? this.editor() : null,
   );
@@ -120,18 +121,22 @@ export class EstimatesPageService {
   private readonly errorState = signal("");
   readonly screen = this.screenState.asReadonly();
   readonly title = computed(() =>
-    this.activeEditor()
-      ? (this.editor()!.index === null ? "Agregar " : "Editar ") +
-        (this.editor()!.item.type === EstimateItemType.Material
-          ? "material"
-          : "mano de obra")
-      : this.screen() === "form"
-        ? this.selected()
-          ? "Editar presupuesto"
-          : "Nuevo presupuesto"
-        : this.screen() === "detail"
-          ? "Detalle del presupuesto"
-          : "Presupuestos",
+    this.editingConditions()
+      ? "Vigencia y condiciones"
+      : this.choosingCustomer()
+        ? "Elegir cliente"
+        : this.activeEditor()
+          ? (this.editor()!.index === null ? "Agregar " : "Editar ") +
+            (this.editor()!.item.type === EstimateItemType.Material
+              ? "material"
+              : "mano de obra")
+          : this.screen() === "form"
+            ? this.selected()
+              ? "Editar presupuesto"
+              : "Nuevo presupuesto"
+            : this.screen() === "detail"
+              ? "Detalle del presupuesto"
+              : "Presupuestos",
   );
   readonly form = this.formState.asReadonly();
   readonly busy = this.working.asReadonly();
@@ -205,7 +210,7 @@ export class EstimatesPageService {
   });
   readonly viewKey = computed(
     () =>
-      `${this.screen()}:${this.choosingCustomer() ? "picker" : this.activeEditor() ? "editor" : "content"}`,
+      `${this.screen()}:${this.editingConditions() ? "conditions" : this.choosingCustomer() ? "picker" : this.activeEditor() ? "editor" : "content"}`,
   );
   readonly listRows = computed<readonly EstimateListRow[]>(() =>
     this.list().map((estimate) => ({
@@ -509,6 +514,18 @@ export class EstimatesPageService {
   }
   async back(): Promise<void> {
     if (this.busy()) return;
+    if (this.editingConditions()) {
+      await this.writeQueue;
+      if (this.saveState() === "failed") {
+        this.notifications.danger(
+          "No pudimos guardar los cambios. Reintentá antes de volver.",
+        );
+        return;
+      }
+      this.keyboard.dismiss();
+      this.editingConditions.set(false);
+      return;
+    }
     if (this.choosingCustomer()) {
       this.choosingCustomer.set(false);
       return;
@@ -669,6 +686,7 @@ export class EstimatesPageService {
     }));
   }
   private startForm(form: EstimateForm): void {
+    this.editingConditions.set(false);
     this.recoveryId = null;
     this.editor.set(null);
     this.editorVisible.set(false);

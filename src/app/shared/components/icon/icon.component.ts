@@ -14,6 +14,7 @@ import {
   bootstrapArrowLeft,
   bootstrapChevronRight,
   bootstrapGear,
+  bootstrapXLg,
 } from "@ng-icons/bootstrap-icons";
 
 /** Los íconos son decorativos: el control padre recibe los toques y define su etiqueta accesible. */
@@ -33,6 +34,7 @@ import {
       bootstrapArrowLeft,
       bootstrapChevronRight,
       bootstrapGear,
+      bootstrapXLg,
     }),
   ],
   template: `<view pointerEvents="none" [accessible]="false"
@@ -52,6 +54,7 @@ export class IconComponent {
     | "bootstrapArrowLeft"
     | "bootstrapChevronRight"
     | "bootstrapGear"
+    | "bootstrapXLg"
   >();
   readonly size = input(24);
   readonly color = input("#526071");

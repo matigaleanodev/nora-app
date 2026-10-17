@@ -15,7 +15,7 @@ import type { ContactForm } from "../../models/contact-form.model";
       <view class="area-field"
         ><nora-field
           autoComplete="tel-area-code"
-          label="Código de área"
+          label="Área"
           [required]="!!value().phoneNumber"
           placeholder="Ej.: 376"
           keyboard="phone-pad"

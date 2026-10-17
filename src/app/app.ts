@@ -1,8 +1,8 @@
 import { ShellService } from "./shared/services/shell.service";
+import { NavigationRowComponent } from "./shared/components/navigation-row/navigation-row.component";
 import { CustomersPageService } from "./customers/services/customers-page.service";
 import { EstimatesPageService } from "./estimates/services/estimates-page.service";
 import type { Estimate } from "./estimates/models/estimate.model";
-import { ActionButtonComponent } from "./shared/components/action-button/action-button.component";
 import { PageLayoutComponent } from "./shared/components/page-layout/page-layout.component";
 import { BusinessPageComponent } from "./business/pages/business-page.component";
 import { BusinessPageService } from "./business/services/business-page.service";
@@ -29,11 +29,11 @@ type Tab = "customers" | "home" | "estimates";
 
 @Component({
   imports: [
+    NavigationRowComponent,
     Modal,
     Pressable,
     IconComponent,
     BusinessPageComponent,
-    ActionButtonComponent,
     PageLayoutComponent,
     SafeAreaProvider,
     SafeAreaView,
@@ -138,19 +138,29 @@ type Tab = "customers" | "home" | "estimates";
                 animate.enter="drawer-enter"
                 [accessibilityViewIsModal]="true"
               >
-                <text class="heading">Menú</text>
-                <nora-button
-                  text="Cerrar menú"
-                  (pressed)="shell.menuOpen.set(false)"
-                />
+                <view class="flex-row items-center justify-between gap-3">
+                  <text class="heading flex-1">Menú</text>
+                  <pressable
+                    class="header-settings items-center justify-center"
+                    accessibilityRole="button"
+                    accessibilityLabel="Cerrar menú"
+                    (press)="shell.menuOpen.set(false)"
+                    ><nora-icon name="bootstrapXLg"
+                  /></pressable>
+                </view>
                 <text class="section-title">Nora</text
                 ><text class="muted">Un poco de orden para tu trabajo.</text>
-                <nora-button
+                <nora-navigation-row
                   text="Datos del negocio"
+                  detail="Nombre, contacto y logo"
                   (pressed)="openBusiness()"
                 />
-                <nora-button text="Ayuda" (pressed)="openInformation('help')" />
-                <nora-button
+                <nora-navigation-row
+                  text="Ayuda"
+                  detail="Uso y guardado local"
+                  (pressed)="openInformation('help')"
+                />
+                <nora-navigation-row
                   text="Acerca de Nora"
                   (pressed)="openInformation('about')"
                 />

@@ -1,8 +1,9 @@
-import { Component, input, output, computed, signal } from "@angular/core";
+import { Component, input, output, computed } from "@angular/core";
 import { Text, View, Pressable } from "@ng-native/components";
+import { CalendarDatePipe } from "../../shared/pipes/calendar-date.pipe";
+import { NavigationRowComponent } from "../../shared/components/navigation-row/navigation-row.component";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
 import { FormFieldComponent } from "../../shared/components/form-field/form-field.component";
-import { DateFieldComponent } from "../../shared/components/date-field/date-field.component";
 import { MoneyPipe } from "../../shared/pipes/money.pipe";
 import type { Customer } from "../../customers/models/customer.model";
 import type {
@@ -25,7 +26,8 @@ import { EstimateCustomerSelectionComponent } from "./estimate-customer-selectio
     ActionButtonComponent,
     FormFieldComponent,
     MoneyPipe,
-    DateFieldComponent,
+    CalendarDatePipe,
+    NavigationRowComponent,
     EstimateCustomerSelectionComponent,
   ],
   template: `<view class="gap-4">
@@ -67,82 +69,71 @@ import { EstimateCustomerSelectionComponent } from "./estimate-customer-selectio
       >Todos los precios usan la moneda elegida. Cambiarla no convierte
       importes.</text
     >
+    <nora-navigation-row
+      text="Vigencia y condiciones"
+      [detail]="
+        ((form().validUntil | calendarDate) || 'Sin vencimiento') +
+        ' · ' +
+        (form().notes ? 'Con notas' : 'Sin notas')
+      "
+      [disabled]="busy()"
+      (pressed)="conditionsEdited.emit()"
+    />
     <text class="section-title">Materiales y mano de obra</text>
     @for (group of groups(); track group.type) {
-      <text class="section-title">{{ group.label }}</text>
-      @if (group.subtotal !== null) {
-        <text class="muted"
-          >Subtotal {{ group.subtotal! | money: form().currency }}</text
-        >
-      }
-      @for (row of group.rows; track row.index) {
-        <pressable
-          class="compact-row gap-2"
-          accessibilityRole="button"
-          [accessibilityLabel]="'Editar ' + row.item.description"
-          (press)="itemEdited.emit(row.index)"
-        >
-          <text class="body-text">{{ row.item.description }}</text>
-          <text class="muted"
-            >{{ row.item.quantity }} {{ row.item.unit }} × {{ row.item.price }}
-            {{ form().currency }}</text
-          >
-          @if (row.subtotal !== undefined) {
-            <text class="task-title">{{
-              row.subtotal! | money: form().currency
-            }}</text>
-          } @else {
-            <text class="error-text"
-              >Falta completar este material o tarea</text
+      <view class="gap-2">
+        <view class="flex-row justify-between items-center gap-3">
+          <text class="task-title">{{ group.label }}</text>
+          @if (group.rows.length && group.subtotal !== null) {
+            <text class="footnote"
+              >Subtotal {{ group.subtotal! | money: form().currency }}</text
             >
+          }</view
+        ><view>
+          @for (row of group.rows; track row.index) {
+            <pressable
+              class="compact-row gap-1"
+              accessibilityRole="button"
+              [accessibilityLabel]="'Editar ' + row.item.description"
+              (press)="itemEdited.emit(row.index)"
+            >
+              <view class="flex-row items-start gap-3">
+                <text class="body-text flex-1">{{ row.item.description }}</text>
+                @if (row.subtotal !== undefined) {
+                  <text class="task-title">{{
+                    row.subtotal! | money: form().currency
+                  }}</text>
+                }</view
+              ><text class="footnote"
+                >{{ row.item.quantity }} {{ row.unitLabel }} ×
+                {{ row.item.price }} {{ form().currency }}</text
+              >
+              @if (row.subtotal === undefined) {
+                <text class="error-text"
+                  >Falta completar este material o tarea</text
+                >
+              }
+            </pressable>
           }
-        </pressable>
-      }
-      <nora-button
-        [text]="
-          group.type === 'material'
-            ? 'Agregar material'
-            : 'Agregar mano de obra'
-        "
-        [disabled]="busy()"
-        (pressed)="typeAdded.emit(group.type)"
-      />
+        </view>
+        <nora-button
+          [text]="
+            group.type === 'material'
+              ? 'Agregar material'
+              : 'Agregar mano de obra'
+          "
+          [disabled]="busy()"
+          (pressed)="typeAdded.emit(group.type)"
+        />
+      </view>
     }
-    @if (preview().total !== null) {
-      <text class="section-title"
-        >Total: {{ preview().total! | money: form().currency }}</text
-      >
-    } @else {
+    @if (preview().total === null) {
       <text class="footnote">{{ preview().error }}</text>
-    }
-    <nora-button
-      text="Vigencia y condiciones"
-      [selected]="optionsOpen()"
-      (pressed)="optionsOpen.set(!optionsOpen())"
-    />
-    @if (!optionsOpen() && (form().validUntil || form().notes)) {
-      <text class="muted">Contiene datos cargados</text>
-    }
-    @if (optionsOpen()) {
-      <nora-date-field
-        label="Válido hasta"
-        [value]="form().validUntil"
-        [disabled]="busy()"
-        (valueChange)="changed.emit({ validUntil: $event })"
-      />
-      <nora-field
-        label="Notas y condiciones"
-        placeholder="Ej.: Incluye materiales. Pago al finalizar."
-        [multiline]="true"
-        [value]="form().notes"
-        [disabled]="busy()"
-        (valueChange)="changed.emit({ notes: $event })"
-      />
     }
   </view>`,
 })
 export class EstimatesFormComponent {
-  readonly optionsOpen = signal(false);
+  readonly conditionsEdited = output<void>();
   readonly itemEdited = output<number>();
   readonly typeAdded = output<EstimateItemType>();
   protected readonly groups = computed(() =>
@@ -152,6 +143,9 @@ export class EstimatesFormComponent {
           item,
           index,
           subtotal: this.preview().subtotals[index],
+          unitLabel:
+            this.units().find((unit) => unit.value === item.unit)?.label ??
+            item.unit,
         }))
         .filter((row) => row.item.type === group.value);
       return {

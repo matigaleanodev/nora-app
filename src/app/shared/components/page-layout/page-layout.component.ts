@@ -30,7 +30,7 @@ import { ActionButtonComponent } from "../action-button/action-button.component"
   ],
   template: `
     <keyboard-avoiding-view class="flex-1" behavior="height">
-      <view class="page-heading flex-row items-center gap-3 px-4 py-3">
+      <view class="page-heading flex-row items-center gap-2 px-4 py-2">
         @if (backLabel()) {
           <nora-button
             variant="back"

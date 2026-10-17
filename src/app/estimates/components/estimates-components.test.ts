@@ -123,9 +123,10 @@ test("el selector recibe clientes filtrados y comunica la selección", async () 
   );
   expect(selected).toHaveBeenCalledWith(customerFixture);
 });
-test("el formulario de presupuesto comunica cambios de moneda y muestra el total recibido", async () => {
+test("el formulario delega moneda y condiciones sin duplicar el total ni desplegar campos ocultos", async () => {
   const changed = vi.fn();
   const typeAdded = vi.fn();
+  const conditionsEdited = vi.fn();
   const form = {
     number: "",
     clientId: "",
@@ -144,9 +145,14 @@ test("el formulario de presupuesto comunica cambios de moneda y muestra el total
       units: UNIT_OPTIONS,
       itemTypes: [{ value: EstimateItemType.Material, label: "Material" }],
     },
-    on: { changed, typeAdded },
+    on: { changed, typeAdded, conditionsEdited },
   });
-  expect(screen.getByText("Total: $ 123,45")).toBeTruthy();
+  expect(screen.queryByText("Total: $ 123,45")).toBeNull();
+  expect(screen.queryByLabelText("Notas y condiciones")).toBeNull();
+  await userEvent.press(
+    screen.getByRole("button", { name: "Vigencia y condiciones" }),
+  );
+  expect(conditionsEdited).toHaveBeenCalledOnce();
   await userEvent.press(screen.getByRole("button", { name: "Moneda USD" }));
   expect(changed).toHaveBeenCalledWith({ currency: Currency.USD });
   expect(form.currency).toBe(Currency.ARS);

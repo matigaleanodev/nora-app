@@ -19,6 +19,7 @@ import { Pressable, Text } from "@ng-native/components";
         variant() === 'secondary' || variant() === 'danger'
       "
       [class.primary-button]="variant() === 'primary'"
+      [class.link-button]="variant() === 'link' || variant() === 'danger-link'"
       [class.choice-button]="variant() === 'choice'"
       [class.choice-active]="selected()"
       [class.back-button]="variant() === 'back'"
@@ -29,10 +30,14 @@ import { Pressable, Text } from "@ng-native/components";
       } @else {
         <text
           [class.action-label]="
-            variant() !== 'primary' && variant() !== 'danger'
+            variant() !== 'primary' &&
+            variant() !== 'danger' &&
+            variant() !== 'danger-link'
           "
           [class.primary-label]="variant() === 'primary'"
-          [class.danger-label]="variant() === 'danger'"
+          [class.danger-label]="
+            variant() === 'danger' || variant() === 'danger-link'
+          "
           >{{ text() }}</text
         >
       }
@@ -43,7 +48,13 @@ export class ActionButtonComponent {
   readonly text = input.required<string>();
   readonly label = input("");
   readonly variant = input<
-    "primary" | "secondary" | "danger" | "choice" | "back"
+    | "primary"
+    | "secondary"
+    | "danger"
+    | "choice"
+    | "back"
+    | "link"
+    | "danger-link"
   >("secondary");
   readonly selected = input(false);
   readonly disabled = input(false);

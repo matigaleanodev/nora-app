@@ -1,4 +1,5 @@
 import { EstimateItemEditorComponent } from "../components/estimate-item-editor.component";
+import { EstimateConditionsComponent } from "../components/estimate-conditions.component";
 import { MoneyPipe } from "../../shared/pipes/money.pipe";
 import { Component, DestroyRef, inject } from "@angular/core";
 import { Text, View } from "@ng-native/components";
@@ -14,6 +15,7 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
   imports: [
     Text,
     EstimateItemEditorComponent,
+    EstimateConditionsComponent,
     MoneyPipe,
     View,
     PageLayoutComponent,
@@ -83,7 +85,6 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
               [statusLabels]="vm.statusLabels"
               [nextStatuses]="vm.nextStatuses()"
               [busy]="vm.busy()"
-              (pdfShared)="vm.sharePdf()"
               (edit)="vm.edit()"
               (deleted)="vm.delete()"
               (statusChanged)="vm.changeStatus($event)"
@@ -100,7 +101,13 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
               (pressed)="vm.retrySave()"
             />
           }
-          @if (vm.activeEditor(); as editor) {
+          @if (vm.editingConditions()) {
+            <nora-estimate-conditions
+              [form]="vm.form()"
+              [busy]="vm.busy()"
+              (changed)="vm.updateForm($event)"
+            />
+          } @else if (vm.activeEditor(); as editor) {
             <nora-estimate-item-editor
               [item]="editor.item"
               [index]="editor.index ?? vm.form().items.length"
@@ -140,12 +147,23 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
               (chooseCustomer)="vm.choosingCustomer.set(true)"
               (typeAdded)="vm.addItem($event)"
               (itemEdited)="vm.editItem($event)"
+              (conditionsEdited)="vm.editingConditions.set(true)"
             />
           }
         }
       }
 
       <view page-footer>
+        @if (vm.screen() === "detail") {
+          <view class="form-footer px-4 py-3"
+            ><nora-button
+              variant="primary"
+              label="Compartir PDF"
+              [text]="vm.busy() ? 'Preparando…' : 'Compartir PDF'"
+              [disabled]="vm.busy()"
+              (pressed)="vm.sharePdf()"
+          /></view>
+        }
         @if (vm.screen() === "list") {
           <view class="form-footer px-4 py-3"
             ><nora-button
@@ -158,7 +176,14 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
         }
         @if (vm.screen() === "form" && !vm.choosingCustomer()) {
           <view class="form-footer px-4 py-3 gap-2">
-            @if (vm.activeEditor(); as editor) {
+            @if (vm.editingConditions()) {
+              <nora-button
+                text="Volver al presupuesto"
+                variant="primary"
+                [disabled]="vm.busy()"
+                (pressed)="vm.back()"
+              />
+            } @else if (vm.activeEditor(); as editor) {
               <nora-button
                 variant="primary"
                 [text]="editor.index === null ? 'Agregar' : 'Guardar cambios'"

@@ -74,6 +74,64 @@ async function setup(
   };
 }
 
+test("las condiciones se editan en una pantalla propia y volver conserva el borrador", async () => {
+  const { user, vm, result } = await setup();
+  await user.press(
+    screen.getByRole("button", { name: "Ver presupuesto P-001" }),
+  );
+  await user.press(screen.getByRole("button", { name: "Editar presupuesto" }));
+  const before = structuredClone(vm.form().items);
+  await user.press(
+    screen.getByRole("button", { name: "Vigencia y condiciones" }),
+  );
+  expect(vm.title()).toBe("Vigencia y condiciones");
+  expect(vm.viewKey()).toBe("form:conditions");
+  expect(screen.queryByLabelText("Descripción del trabajo *")).toBeNull();
+  await fireEvent.changeText(
+    screen.getByLabelText("Notas y condiciones"),
+    "Coordinar la visita antes de comenzar.",
+  );
+  await vi.waitFor(() => expect(vm.saveState()).toBe("saved"));
+  await user.press(
+    screen.getByRole("button", { name: "Volver al presupuesto" }),
+  );
+  await vi.waitFor(() => expect(vm.editingConditions()).toBe(false));
+  await result.detectChanges();
+  expect(vm.form().notes).toBe("Coordinar la visita antes de comenzar.");
+  expect(vm.form().items).toEqual(before);
+  expect(screen.queryByLabelText("Notas y condiciones")).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Vigencia y condiciones" }),
+  ).toBeTruthy();
+});
+
+test("un fallo al guardar condiciones impide salir silenciosamente y permite reintentar", async () => {
+  const { user, vm, result } = await setup();
+  await user.press(
+    screen.getByRole("button", { name: "Ver presupuesto P-001" }),
+  );
+  await user.press(screen.getByRole("button", { name: "Editar presupuesto" }));
+  await user.press(
+    screen.getByRole("button", { name: "Vigencia y condiciones" }),
+  );
+  const recovery = result.componentRef.injector.get(EstimateRecoveryService);
+  const save = vi
+    .spyOn(recovery, "save")
+    .mockRejectedValue(new Error("Disco lleno"));
+  await fireEvent.changeText(
+    screen.getByLabelText("Notas y condiciones"),
+    "Trabajo escrito sin perder.",
+  );
+  await vi.waitFor(() => expect(vm.saveState()).toBe("failed"));
+  await vm.back();
+  expect(vm.editingConditions()).toBe(true);
+  expect(vm.form().notes).toBe("Trabajo escrito sin perder.");
+  save.mockResolvedValue(undefined);
+  await vm.retrySave();
+  await vm.back();
+  expect(vm.editingConditions()).toBe(false);
+});
+
 test("muestra una lista legible y abre el detalle con totales y datos del cliente", async () => {
   const { user } = await setup();
   expect(screen.getByText("$ 2.501,00")).toBeTruthy();
@@ -115,7 +173,7 @@ test("crea un presupuesto en USD con cantidad decimal y precio convertido a cent
     "10,25",
   );
   await user.press(screen.getByRole("button", { name: "Agregar" }));
-  expect(screen.getByText("Total: US$ 15,38")).toBeTruthy();
+  expect(screen.getByText(/Total ·\s*US\$ 15,38/)).toBeTruthy();
   await user.press(screen.getByRole("button", { name: "Revisar presupuesto" }));
   expect(estimates.create).toHaveBeenCalledWith(
     expect.objectContaining({

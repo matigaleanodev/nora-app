@@ -6,15 +6,16 @@ import type { Currency } from "../models/estimate.model";
 @Component({
   selector: "nora-estimate-item-card",
   imports: [Text, View, MoneyPipe],
-  template: `<view class="compact-row gap-2">
-    <text class="task-title">{{ row().item.description }}</text
-    ><text class="muted"
+  template: `<view class="compact-row gap-1">
+    <view class="flex-row items-start gap-3">
+      <text class="body-text flex-1">{{ row().item.description }}</text>
+      <text class="task-title">{{
+        row().subtotalCents | money: currency()
+      }}</text> </view
+    ><text class="footnote"
       >{{ row().item.quantity }} {{ row().unitLabel }} ×
       {{ row().item.unitPriceCents | money: currency() }}</text
     >
-    <text class="task-title">{{
-      row().subtotalCents | money: currency()
-    }}</text>
   </view>`,
 })
 export class EstimateItemCardComponent {

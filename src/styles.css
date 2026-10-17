@@ -246,7 +246,7 @@
   padding: 14px;
 }
 .form-multiline {
-  min-height: 108px;
+  min-height: 88px;
   text-align-vertical: top;
 }
 .area-field {
@@ -304,8 +304,8 @@
 .back-button {
   width: 48px;
   align-items: center;
-  border-radius: 22px;
-  background-color: var(--accent-soft);
+  border-radius: 8px;
+  background-color: transparent;
   min-height: 48px;
   align-self: flex-start;
   justify-content: center;
@@ -436,7 +436,7 @@
   width: 48px;
   height: 48px;
   border-radius: 8px;
-  background-color: var(--accent-soft);
+  background-color: transparent;
 }
 
 text,
@@ -455,6 +455,30 @@ text-input {
   padding-top: 12px;
   padding-bottom: 12px;
   min-height: 48px;
+}
+.navigation-row {
+  min-height: 48px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom-width: 1px;
+  border-color: var(--border);
+}
+.link-button {
+  min-height: 48px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  justify-content: center;
+}
+.total-row {
+  border-top-width: 1px;
+  border-color: var(--border);
+  padding-top: 16px;
+}
+.total-amount {
+  font-family: NotoSans-Bold;
+  font-size: 28px;
+  line-height: 38px;
+  color: var(--accent);
 }
 .drawer-scrim {
   flex: 1;

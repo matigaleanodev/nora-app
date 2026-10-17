@@ -9,6 +9,7 @@ import {
   type Estimate,
 } from "../../estimates/models/estimate.model";
 import { STATUS_LABELS } from "../../estimates/services/estimates-page.service";
+import { calculateEstimateTotal } from "../../estimates/utils/estimate-totals";
 @Injectable({ providedIn: "root" })
 export class HomePageService {
   readonly business = inject(BusinessPageService);
@@ -37,6 +38,9 @@ export class HomePageService {
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, 5),
   );
+  estimateTotal(estimate: Estimate): number {
+    return calculateEstimateTotal(estimate.items);
+  }
   async load(): Promise<void> {
     this.loading.set(true);
     this.error.set("");

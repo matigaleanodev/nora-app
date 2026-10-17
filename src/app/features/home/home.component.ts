@@ -1,4 +1,6 @@
 import { HomePageService } from "./home-page.service";
+import { MoneyPipe } from "../../shared/pipes/money.pipe";
+import { NavigationRowComponent } from "../../shared/components/navigation-row/navigation-row.component";
 import { Component, inject, output } from "@angular/core";
 import { Pressable, Text, View } from "@ng-native/components";
 import { type Estimate } from "../../estimates/models/estimate.model";
@@ -6,7 +8,15 @@ import { ActionButtonComponent } from "../../shared/components/action-button/act
 import { PageLayoutComponent } from "../../shared/components/page-layout/page-layout.component";
 @Component({
   selector: "nora-home",
-  imports: [Pressable, Text, View, ActionButtonComponent, PageLayoutComponent],
+  imports: [
+    MoneyPipe,
+    Pressable,
+    Text,
+    View,
+    ActionButtonComponent,
+    PageLayoutComponent,
+    NavigationRowComponent,
+  ],
   template: `<nora-page-layout title="Mi negocio" [error]="vm.error()">
     <text class="muted">Tu trabajo, a mano.</text>
     @if (vm.loading()) {
@@ -29,14 +39,20 @@ import { PageLayoutComponent } from "../../shared/components/page-layout/page-la
         (pressed)="vm.business.open()"
       />
       <text class="section-title">Tus presupuestos</text>
-      <nora-button
-        [text]="vm.drafts() + ' borradores'"
-        (pressed)="listed.emit('draft')"
-      />
-      <nora-button
-        [text]="vm.sent() + ' enviados pendientes de respuesta'"
-        (pressed)="listed.emit('sent')"
-      />
+      <view>
+        <nora-navigation-row
+          [text]="
+            vm.drafts() + (vm.drafts() === 1 ? ' borrador' : ' borradores')
+          "
+          detail="Continuá donde quedaste"
+          (pressed)="listed.emit('draft')"
+        />
+        <nora-navigation-row
+          [text]="vm.sent() + (vm.sent() === 1 ? ' enviado' : ' enviados')"
+          detail="Pendientes de respuesta"
+          (pressed)="listed.emit('sent')"
+        />
+      </view>
       <nora-button
         text="Nuevo presupuesto"
         variant="primary"
@@ -50,10 +66,16 @@ import { PageLayoutComponent } from "../../shared/components/page-layout/page-la
           [accessibilityLabel]="'Abrir presupuesto ' + estimate.number"
           (press)="opened.emit(estimate)"
         >
-          <text class="body-text"
-            >{{ estimate.number }} · {{ estimate.customerSnapshot.name }}</text
+          <view class="flex-row items-start gap-3"
+            ><text class="body-text flex-1"
+              >{{ estimate.number }} ·
+              {{ estimate.customerSnapshot.name }}</text
+            >
+            <text class="task-title">{{
+              vm.estimateTotal(estimate) | money: estimate.currency
+            }}</text></view
           >
-          <text class="muted"
+          <text class="footnote"
             >{{ estimate.description }} · {{ vm.labels[estimate.status] }}</text
           >
         </pressable>
