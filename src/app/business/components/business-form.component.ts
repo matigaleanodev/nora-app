@@ -34,33 +34,33 @@ import type { BusinessForm } from "../models/business-profile.model";
     />
     <text class="section-title">Logo opcional</text>
     @if (form().logo; as logo) {
-      <view class="task-card rounded-2xl p-4 items-center">
+      <view class="flex-row items-center">
         <image
           [source]="{ uri: logo.uri }"
           resizeMode="contain"
           accessibilityLabel="Logo de tu negocio"
-          [style]="{ width: 160, height: 120 }"
+          [style]="{ width: 80, height: 64 }"
         />
       </view>
     }
-    <nora-button
-      [text]="form().logo ? 'Cambiar logo' : 'Elegir logo de la galería'"
-      label="Elegir logo"
-      [disabled]="disabled()"
-      (pressed)="chooseLogo.emit()"
-    />
-    @if (form().logo) {
+    <view class="flex-row flex-wrap items-center gap-3">
       <nora-button
-        variant="danger"
-        text="Quitar logo"
+        variant="link"
+        [text]="form().logo ? 'Cambiar logo' : 'Elegir logo de la galería'"
+        label="Elegir logo"
         [disabled]="disabled()"
-        (pressed)="changed.emit({ logo: undefined })"
+        (pressed)="chooseLogo.emit()"
       />
-    }
-    <text class="footnote"
-      >JPG, PNG o WebP · hasta 5 MB. Se guarda una copia en tu teléfono al
-      guardar los datos.</text
-    >
+      @if (form().logo) {
+        <nora-button
+          variant="danger-link"
+          text="Quitar logo"
+          [disabled]="disabled()"
+          (pressed)="changed.emit({ logo: undefined })"
+        />
+      }
+    </view>
+    <text class="footnote">JPG, PNG o WebP · hasta 5 MB.</text>
   </view>`,
 })
 export class BusinessFormComponent {

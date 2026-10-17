@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from "@angular/core";
+import { Component, inject, input, output, signal } from "@angular/core";
 import { Pressable, Text, View } from "@ng-native/components";
 import { CalendarDatePipe } from "../../pipes/calendar-date.pipe";
 import { DatePickerService } from "../../services/date-picker.service";
@@ -13,8 +13,11 @@ import { IconComponent } from "../icon/icon.component";
         class="date-input-value flex-1 justify-center"
         accessibilityRole="button"
         [accessibilityLabel]="label()"
-        [accessibilityState]="{ disabled: disabled() }"
-        [disabled]="disabled()"
+        [accessibilityState]="{
+          disabled: disabled() || opening(),
+          busy: opening(),
+        }"
+        [disabled]="disabled() || opening()"
         (press)="choose()"
       >
         <text class="body-text">{{
@@ -26,8 +29,8 @@ import { IconComponent } from "../icon/icon.component";
           class="date-input-clear items-center justify-center"
           accessibilityRole="button"
           accessibilityLabel="Quitar fecha"
-          [accessibilityState]="{ disabled: disabled() }"
-          [disabled]="disabled()"
+          [accessibilityState]="{ disabled: disabled() || opening() }"
+          [disabled]="disabled() || opening()"
           (press)="valueChange.emit('')"
         >
           <nora-icon name="bootstrapTrash3" [size]="20" />
@@ -42,8 +45,15 @@ export class DateFieldComponent {
   readonly disabled = input(false);
   readonly valueChange = output<string>();
   private readonly picker = inject(DatePickerService);
+  protected readonly opening = signal(false);
   protected async choose(): Promise<void> {
-    const value = await this.picker.pick(this.value());
-    if (value !== null) this.valueChange.emit(value);
+    if (this.disabled() || this.opening()) return;
+    this.opening.set(true);
+    try {
+      const value = await this.picker.pick(this.value());
+      if (value !== null) this.valueChange.emit(value);
+    } finally {
+      this.opening.set(false);
+    }
   }
 }

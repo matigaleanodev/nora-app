@@ -13,3 +13,10 @@ agents.md
 AGENTS.md
 CLAUDE.md
 roadmap.md
+# Artefactos generados con trazabilidad de bytes; conservar su fuente canónica.
+docs/design-kit/index.html
+docs/design-kit/figma-payload.json
+docs/design-kit/figma-import/figma-state.json
+docs/design-kit/preview-verification.json
+docs/design-kit/preview-template.html
+docs/design-kit/nora-presupuesto-ejemplo.html

@@ -1,4 +1,5 @@
 import { inject, Injectable } from "@angular/core";
+import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { NotificationService } from "./notification.service";
 import {
   calendarDateFromLocal,
@@ -8,10 +9,11 @@ import {
 @Injectable({ providedIn: "root" })
 export class DatePickerService {
   private readonly notifications = inject(NotificationService);
+  private active = false;
   async pick(value: string): Promise<string | null> {
+    if (this.active) return null;
+    this.active = true;
     try {
-      const { DateTimePickerAndroid } =
-        await import("@react-native-community/datetimepicker");
       return await new Promise<string | null>((resolve, reject) => {
         DateTimePickerAndroid.open({
           value: isCalendarDate(value)
@@ -19,12 +21,9 @@ export class DatePickerService {
             : new Date(),
           mode: "date",
           onError: reject,
-          onChange: (event, selected) =>
-            resolve(
-              event.type === "set" && selected
-                ? calendarDateFromLocal(selected)
-                : null,
-            ),
+          onValueChange: (_event, selected) =>
+            resolve(calendarDateFromLocal(selected)),
+          onDismiss: () => resolve(null),
         });
       });
     } catch {
@@ -32,6 +31,8 @@ export class DatePickerService {
         "No pudimos abrir el calendario. Volvé a intentarlo.",
       );
       return null;
+    } finally {
+      this.active = false;
     }
   }
 }

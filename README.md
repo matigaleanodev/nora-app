@@ -1,12 +1,14 @@
 # Nora App
 
+[Visual identity](docs/visual-identity.md) · [Design and UX](docs/ux-guidelines.md) · [Design kit](docs/design-kit/README.md) · [Implementation handoff](docs/implementation-handoff.md).
+
 **N.O.R.A. — Notas, Organización, Registros y Administración.**
 
 Android assistant for technicians: customers, estimates with materials/labor, and PDFs to share.
 
 ## Current state
 
-Android app with example home tasks and working local customer/estimate CRUD screens. Bottom tabs: Customers · Home · Estimates. Both domains have searchable lists, a circular add button, full details and separate create/edit forms. Customers archive/restore; only draft estimates can be edited/deleted. Confirmations protect destructive actions and unsaved changes. UUID entities and SQLite persistence remain offline, with no account/backend/ads. Light terracotta/olive palette and semantic theme tokens. The user tested the initial preview in Expo Go; the new CRUD, native keyboard/back behavior and persistence after restarting Android still need device validation.
+Android app with a real business dashboard, local customer/estimate CRUD, and offline PDF sharing. Bottom tabs: Customers · Home · Estimates; additional options open in the right drawer. Estimates use compact materials/labor lists, dedicated editors, local autosave/recovery, and a separate validity/conditions screen. Customers archive/restore; only draft estimates can be edited/deleted. UUID entities and SQLite persistence remain offline, with no account/backend/ads. The approved visual identity uses deep teal, Noto Sans, and the Nora monogram. The user accepted the revised appearance; remaining device checks are tracked in [implementation status](docs/implementation-status.md).
 
 Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6, Vitest 5. Resolved versions: package-lock.json. Native views through Fabric, not Ionic/WebView. Tailwind CSS 4 is configured through @ng-native/tailwind 0.13.0, Metro and src/styles.css. Global native styles are registered in src/main.ts.
 
@@ -54,7 +56,7 @@ Validation: typecheck and nine tests pass (native UI tests plus domain/persisten
 
 ## Unit tests
 
-Run `npm test` from Ubuntu/WSL. The suite currently has 186 passing cases across twenty-seven files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite, Expo Crypto, Print, Sharing and FileSystem are mocked; this suite does not prove their native device execution. `npm run typecheck` also passes.
+Run `npm test` from Ubuntu/WSL. The suite currently has 195 passing cases across twenty-nine files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite, Expo Crypto, Print, Sharing and FileSystem are mocked; this suite does not prove their native device execution. `npm run typecheck` also passes.
 
 ## Formatting
 
@@ -100,10 +102,14 @@ Verification on 2026-10-14: typecheck, 158 tests, formatting and Android export 
 
 ## Estimate PDF and sharing
 
-From a saved estimate detail, **Compartir PDF** generates an A4 document offline with `expo-print` and opens Android sharing through `expo-sharing`. Complete the required provider name in Mi negocio first. The document contains the saved customer/address snapshot, the current business profile and optional embedded logo, work description, materials/labor with quantities and units, unit prices, subtotals, total, ARS/USD, validity in dd/MM/yyyy and public notes. Drafts are marked BORRADOR, including drafts without items. Domain calculations supply the same integer-cent rounding as the app. User text is escaped; the document loads no external assets.
+From a saved estimate detail, **Compartir PDF** generates an A4 document offline with `pdf-lib` and `@pdf-lib/fontkit` and opens Android sharing through `expo-sharing`. Complete the required provider name in Mi negocio first. The document contains the saved customer/address snapshot, the current business profile and optional embedded logo, work description, materials/labor with quantities and units, unit prices, subtotals, total, ARS/USD, validity in dd/MM/yyyy and public notes. Drafts are marked BORRADOR, including drafts without items. Domain calculations supply the same integer-cent rounding as the app. Text is drawn directly into the PDF; the document loads no external assets.
 
-`EstimatePdfService` handles native generation/files/sharing; the HTML builder is a pure utility and components only emit actions to the page service. A private, uniquely named copy stays in `cache/estimate-pdfs` so the receiving app can finish reading it. Later exports remove copies older than 24 hours; the OS can reclaim cache earlier. This is not a backup or permanent document archive. Provider data is read at export time; it is not an immutable historical snapshot.
+`EstimatePdfService` handles local assets/files/sharing; the PDF byte builder is a pure utility and components only emit actions to the page service. A private, uniquely named copy stays in `cache/estimate-pdfs` so the receiving app can finish reading it. Later exports remove copies older than 24 hours; the OS can reclaim cache earlier. This is not a backup or permanent document archive. Provider data is read at export time; it is not an immutable historical snapshot.
 
 Sharing does not select the WhatsApp contact, confirm delivery or change estimate status. Select the destination app/contact yourself and mark the estimate sent separately. An error preserves the detail and allows retry; double requests are blocked while busy.
 
-Validation: 186 tests across 27 files, typecheck, formatting and Android export pass. Chromium PDF samples were visually reviewed at one page, 100 items and with extensive notes/descriptions. Actual Expo Go printing, logo rendering, pagination and sharing to another Android app still require device validation.
+Validation for this branch is recorded in [implementation status and manual checks](docs/implementation-status.md). PDFs from the actual byte generator were visually reviewed, including 50 lines and extensive notes. Android execution, logos and sharing require manual testing before publishing.
+
+## Visual identity and draft recovery
+
+P1 petroleum + T2 offline Noto Sans + F1 precise. Home/My business uses real data; right drawer and tabs only on the three primary screens. Materials and labor use separate editors, repeated entry and isolated cancellation. `estimate-recovery.v1` retains incomplete text and interrupted editors with stable UUIDs and serialized writes; review validates before creating/updating `estimates.v1`, preserving its contracts. See [implementation and manual checks](docs/implementation-status.md).

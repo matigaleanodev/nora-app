@@ -1,3 +1,9 @@
+import {
+  EstimateRecoveryService,
+  type EstimateRecovery,
+  type EstimateEditorRecovery,
+} from "./estimate-recovery.service";
+import { IdService } from "../../shared/services/id.service";
 import type {
   EstimateItemRow,
   EstimateListRow,
@@ -65,6 +71,38 @@ export const UNIT_OPTIONS = [
 /** Coordina la edición y el seguimiento; el servicio de dominio valida y persiste. */
 @Injectable({ providedIn: "root" })
 export class EstimatesPageService {
+  private readonly recovery = inject(EstimateRecoveryService);
+  private readonly ids = inject(IdService);
+  private recoveryId: Promise<string> | null = null;
+  private writeQueue: Promise<void> = Promise.resolve();
+  private revision = 0;
+  readonly recoveries = signal<readonly EstimateRecovery[]>([]);
+  readonly saveState = signal<"idle" | "saving" | "saved" | "failed">("idle");
+  readonly editor = signal<EstimateEditorRecovery | null>(null);
+  readonly editorError = signal("");
+  readonly editorVisible = signal(false);
+  readonly editingConditions = signal(false);
+  readonly activeEditor = computed(() =>
+    this.editorVisible() ? this.editor() : null,
+  );
+  readonly saveLabel = computed(
+    () =>
+      ({
+        idle: "Los cambios se guardan en este teléfono",
+        saving: "Guardando…",
+        saved: "Guardado en este teléfono",
+        failed: "No pudimos guardar los cambios",
+      })[this.saveState()],
+  );
+  readonly editorSubtotal = computed(() => {
+    const editor = this.editor();
+    if (!editor) return undefined;
+    try {
+      return calculateItemSubtotal(this.toItems([editor.item])[0]);
+    } catch {
+      return undefined;
+    }
+  });
   private readonly estimates = inject(EstimatesService);
   private readonly pdf = inject(EstimatePdfService);
   private readonly customers = inject(CustomersService);
@@ -83,29 +121,56 @@ export class EstimatesPageService {
   private readonly errorState = signal("");
   readonly screen = this.screenState.asReadonly();
   readonly title = computed(() =>
-    this.screen() === "form"
-      ? this.selected()
-        ? "Editar presupuesto"
-        : "Nuevo presupuesto"
-      : this.screen() === "detail"
-        ? "Detalle del presupuesto"
-        : "Presupuestos",
+    this.editingConditions()
+      ? "Vigencia y condiciones"
+      : this.choosingCustomer()
+        ? "Elegir cliente"
+        : this.activeEditor()
+          ? (this.editor()!.index === null ? "Agregar " : "Editar ") +
+            (this.editor()!.item.type === EstimateItemType.Material
+              ? "material"
+              : "mano de obra")
+          : this.screen() === "form"
+            ? this.selected()
+              ? "Editar presupuesto"
+              : "Nuevo presupuesto"
+            : this.screen() === "detail"
+              ? "Detalle del presupuesto"
+              : "Presupuestos",
   );
   readonly form = this.formState.asReadonly();
   readonly busy = this.working.asReadonly();
   readonly loading = this.loadState.asReadonly();
   readonly error = this.errorState.asReadonly();
   readonly search = signal("");
+  readonly statusFilter = signal<"all" | "draft" | "sent">("all");
   readonly choosingCustomer = signal(false);
   readonly customerSearch = signal("");
   readonly selected = computed(() =>
     this.records().find((estimate) => estimate.id === this.selectedId()),
   );
+  readonly visibleRecoveries = computed(() =>
+    this.statusFilter() === "sent"
+      ? []
+      : this.recoveries().filter((value) =>
+          `${value.form.number} ${value.form.description}`
+            .toLocaleLowerCase()
+            .includes(this.search().trim().toLocaleLowerCase()),
+        ),
+  );
   readonly list = computed(() =>
-    this.records().filter((estimate) =>
-      `${estimate.number} ${estimate.customerSnapshot.name}`
-        .toLocaleLowerCase()
-        .includes(this.search().trim().toLocaleLowerCase()),
+    this.records().filter(
+      (estimate) =>
+        !this.recoveries().some(
+          (value) =>
+            value.estimateId === estimate.id &&
+            estimate.status === EstimateStatus.Draft,
+        ) &&
+        (this.statusFilter() === "all" ||
+          estimate.status === this.statusFilter()) &&
+        `${estimate.number} ${estimate.customerSnapshot.name} ${estimate.description}`
+          .toLocaleLowerCase()
+          .includes(this.search().trim().toLocaleLowerCase()),
     ),
   );
   readonly customerChoices = computed(() =>
@@ -144,7 +209,8 @@ export class EstimatesPageService {
     }
   });
   readonly viewKey = computed(
-    () => `${this.screen()}:${this.choosingCustomer() ? "picker" : "content"}`,
+    () =>
+      `${this.screen()}:${this.editingConditions() ? "conditions" : this.choosingCustomer() ? "picker" : this.activeEditor() ? "editor" : "content"}`,
   );
   readonly listRows = computed<readonly EstimateListRow[]>(() =>
     this.list().map((estimate) => ({
@@ -190,11 +256,13 @@ export class EstimatesPageService {
     if (this.busy()) return;
     this.loadState.set(true);
     try {
-      const [estimates, customers] = await Promise.all([
+      const [estimates, customers, recoveries] = await Promise.all([
         this.estimates.getAll(),
         this.customers.getAll(),
+        this.recovery.getAll(),
       ]);
       this.records.set(estimates);
+      this.recoveries.set(recoveries);
       this.customerRecords.set(customers);
       this.errorState.set("");
     } catch {
@@ -205,17 +273,18 @@ export class EstimatesPageService {
     }
   }
   open(estimate: Estimate): void {
+    const recovery = this.recoveries().find(
+      (value) => value.estimateId === estimate.id,
+    );
+    if (recovery && estimate.status === EstimateStatus.Draft) {
+      this.resume(recovery);
+      return;
+    }
     this.selectedId.set(estimate.id);
     this.screenState.set("detail");
     this.errorState.set("");
   }
   create(): void {
-    if (!this.customerRecords().some((customer) => !customer.archived)) {
-      this.notifications.warning(
-        "Primero agregá un cliente activo desde Clientes.",
-      );
-      return;
-    }
     this.selectedId.set(null);
     this.startForm(emptyForm());
   }
@@ -241,23 +310,16 @@ export class EstimatesPageService {
     key: K,
     value: EstimateForm[K],
   ): void {
-    if (!this.busy())
+    if (!this.busy()) {
       this.formState.update((form) => ({ ...form, [key]: value }));
+      this.persist();
+    }
   }
   updateForm(changes: Partial<EstimateForm>): void {
-    if (!this.busy())
+    if (!this.busy()) {
       this.formState.update((form) => ({ ...form, ...changes }));
-  }
-  updateItem(
-    index: number,
-    changes: Partial<Omit<EstimateItemForm, "id">>,
-  ): void {
-    this.patch(
-      "items",
-      this.form().items.map((item, position) =>
-        position === index ? { ...item, ...changes } : item,
-      ),
-    );
+      this.persist();
+    }
   }
   chooseCustomer(customer: Customer): void {
     if (this.busy()) return;
@@ -267,24 +329,179 @@ export class EstimatesPageService {
       addressId: "",
     }));
     this.choosingCustomer.set(false);
+    this.persist();
   }
-  addItem(): void {
-    this.patch("items", [
-      ...this.form().items,
-      {
+  addItem(type: EstimateItemType = EstimateItemType.Material): void {
+    if (this.busy()) return;
+    if (this.editor()) {
+      this.editorVisible.set(true);
+      return;
+    }
+    this.editor.set({
+      index: null,
+      item: {
         description: "",
-        type: EstimateItemType.Material,
+        type,
         quantity: "1",
-        unit: MeasurementUnit.Unit,
+        unit:
+          type === EstimateItemType.Material
+            ? MeasurementUnit.Unit
+            : MeasurementUnit.Job,
         price: "",
       },
-    ]);
+    });
+    this.editorVisible.set(true);
+    this.editorError.set("");
   }
-  removeItem(index: number): void {
+  editItem(index: number): void {
+    if (this.editor()) {
+      this.editorVisible.set(true);
+      return;
+    }
+    this.editor.set({ index, item: { ...this.form().items[index] } });
+    this.editorVisible.set(true);
+    this.editorError.set("");
+  }
+  updateEditor(changes: Partial<EstimateItemForm>): void {
+    if (this.busy()) return;
+    this.editor.update((editor) =>
+      editor ? { ...editor, item: { ...editor.item, ...changes } } : null,
+    );
+    this.persist();
+  }
+  confirmItem(another = false): void {
+    const editor = this.editor();
+    if (!editor || this.busy()) return;
+    try {
+      if (!editor.item.description.trim())
+        throw new Error(
+          editor.item.type === EstimateItemType.Material
+            ? "Completá el material."
+            : "Completá el trabajo a realizar.",
+        );
+      this.toItems([editor.item]).forEach(calculateItemSubtotal);
+      this.formState.update((form) => ({
+        ...form,
+        items:
+          editor.index === null
+            ? [...form.items, editor.item]
+            : form.items.map((item, index) =>
+                index === editor.index ? editor.item : item,
+              ),
+      }));
+      this.editor.set(null);
+      this.persist();
+      if (another) this.addItem(editor.item.type);
+    } catch (error) {
+      this.editorError.set(
+        error instanceof Error ? error.message : "Revisá el material o tarea.",
+      );
+    }
+  }
+  cancelItem(): void {
+    this.editor.set(null);
+    this.editorError.set("");
+    this.persist();
+  }
+  async removeItem(index: number): Promise<void> {
+    if (this.busy()) return;
+    const item = this.form().items[index];
+    if (
+      !item ||
+      !(await this.dialogs.confirm(
+        item.type === EstimateItemType.Material
+          ? "¿Eliminar material?"
+          : "¿Eliminar tarea?",
+        { confirm: "Eliminar", cancel: "Conservar", destructive: true },
+      ))
+    )
+      return;
+    this.editor.set(null);
     this.patch(
       "items",
       this.form().items.filter((_, position) => position !== index),
     );
+  }
+  resume(value: EstimateRecovery): void {
+    // Si el proceso terminó entre guardar el documento y limpiar su recuperación,
+    // el UUID estable permite retomar ese mismo documento sin volver a crearlo.
+    const estimateId =
+      value.estimateId ??
+      (this.records().some((record) => record.id === value.id)
+        ? value.id
+        : null);
+    if (
+      estimateId &&
+      !this.records().some(
+        (record) =>
+          record.id === estimateId && record.status === EstimateStatus.Draft,
+      )
+    ) {
+      this.notifications.warning(
+        "Esta edición pertenece a un presupuesto que ya no se puede editar.",
+      );
+      return;
+    }
+    this.selectedId.set(estimateId);
+    this.startForm(value.form);
+    this.recoveryId = Promise.resolve(value.id);
+    this.editor.set(value.editor);
+    this.editorVisible.set(!!value.editor);
+    this.saveState.set("saved");
+  }
+  async deleteRecovery(value: EstimateRecovery): Promise<void> {
+    if (
+      !(await this.dialogs.confirm("¿Eliminar borrador incompleto?", {
+        confirm: "Eliminar",
+        cancel: "Conservar",
+        destructive: true,
+      }))
+    )
+      return;
+    try {
+      await this.recovery.remove(value.id);
+      this.recoveries.update((records) =>
+        records.filter((record) => record.id !== value.id),
+      );
+    } catch (error) {
+      this.fail(error, "No pudimos eliminar el borrador.");
+    }
+  }
+  private persist(): void {
+    if (!this.dirty() && !this.editor() && !this.recoveryId) return;
+    this.recoveryId ??= this.ids.create().catch((error) => {
+      this.recoveryId = null;
+      throw error;
+    });
+    const id = this.recoveryId;
+    const form = structuredClone(this.form());
+    const editor = structuredClone(this.editor());
+    const estimateId = this.selectedId();
+    const revision = ++this.revision;
+    this.saveState.set("saving");
+    this.writeQueue = this.writeQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const value: EstimateRecovery = {
+          id: await id,
+          estimateId,
+          form,
+          editor,
+          updatedAt: new Date().toISOString(),
+        };
+        await this.recovery.save(value);
+        this.recoveries.update((records) => [
+          ...records.filter((record) => record.id !== value.id),
+          value,
+        ]);
+        if (revision === this.revision) this.saveState.set("saved");
+      })
+      .catch(() => {
+        if (revision === this.revision) this.saveState.set("failed");
+      });
+  }
+  retrySave(): void {
+    this.persist();
   }
   total(estimate: Estimate): number {
     return calculateEstimateTotal(estimate.items);
@@ -297,32 +514,61 @@ export class EstimatesPageService {
   }
   async back(): Promise<void> {
     if (this.busy()) return;
+    if (this.editingConditions()) {
+      await this.writeQueue;
+      if (this.saveState() === "failed") {
+        this.notifications.danger(
+          "No pudimos guardar los cambios. Reintentá antes de volver.",
+        );
+        return;
+      }
+      this.keyboard.dismiss();
+      this.editingConditions.set(false);
+      return;
+    }
     if (this.choosingCustomer()) {
       this.choosingCustomer.set(false);
       return;
     }
-    if (
-      this.dirty() &&
-      !(await this.dialogs.confirm("¿Descartar cambios?", {
-        message: "Los cambios sin guardar se perderán.",
-        confirm: "Descartar",
-        cancel: "Seguir editando",
-        destructive: true,
-      }))
-    )
+    if (this.activeEditor()) {
+      await this.writeQueue;
+      if (this.saveState() === "failed") return;
+      this.editorVisible.set(false);
+      this.editorError.set("");
       return;
+    }
+    await this.writeQueue;
+    if (this.saveState() === "failed") {
+      this.notifications.danger(
+        "No pudimos guardar los cambios. Reintentá antes de volver.",
+      );
+      return;
+    }
     this.keyboard.dismiss();
     this.errorState.set("");
-    this.screenState.set(
-      this.screen() === "form" && this.selected() ? "detail" : "list",
-    );
+    this.screenState.set("list");
   }
   async save(): Promise<void> {
     if (this.busy() || this.loading()) return;
     this.working.set(true);
     this.errorState.set("");
     try {
+      await this.writeQueue;
+      if (this.saveState() === "failed")
+        throw new Error(
+          "No pudimos guardar los cambios. Reintentá antes de revisar.",
+        );
+      if (this.editor())
+        throw new Error(
+          "Confirmá o cancelá el material o tarea pendiente antes de revisar.",
+        );
       const form = this.form();
+      if (!form.number.trim())
+        throw new Error("Completá el número del presupuesto para revisarlo.");
+      if (!form.clientId)
+        throw new Error("Elegí un cliente para revisar el presupuesto.");
+      if (!form.description.trim())
+        throw new Error("Completá la descripción del trabajo para revisarlo.");
       const input: EstimateInput = {
         ...form,
         addressId: form.addressId || undefined,
@@ -333,15 +579,26 @@ export class EstimatesPageService {
       const id = this.selectedId();
       const saved = id
         ? await this.estimates.update(id, input)
-        : await this.estimates.create(input);
+        : await this.estimates.create(
+            input,
+            this.recoveryId ? await this.recoveryId : undefined,
+          );
       this.records.update((records) => [
         ...records.filter((estimate) => estimate.id !== saved.id),
         saved,
       ]);
       this.selectedId.set(saved.id);
+      const recoveryId = this.recoveryId ? await this.recoveryId : null;
+      if (recoveryId) {
+        await this.recovery.remove(recoveryId);
+        this.recoveries.update((records) =>
+          records.filter((record) => record.id !== recoveryId),
+        );
+      }
+      this.recoveryId = null;
+      this.initialForm.set(JSON.stringify(this.form()));
       this.screenState.set("detail");
       this.keyboard.dismiss();
-      this.notifications.success("Presupuesto guardado.");
     } catch (error: unknown) {
       this.fail(error, "No pudimos guardar el presupuesto.");
     } finally {
@@ -429,6 +686,11 @@ export class EstimatesPageService {
     }));
   }
   private startForm(form: EstimateForm): void {
+    this.editingConditions.set(false);
+    this.recoveryId = null;
+    this.editor.set(null);
+    this.editorVisible.set(false);
+    this.saveState.set("idle");
     this.formState.set(form);
     this.initialForm.set(JSON.stringify(form));
     this.screenState.set("form");

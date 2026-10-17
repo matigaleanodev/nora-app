@@ -17,7 +17,7 @@ import type { Customer } from "../../customers/models/customer.model";
       <pressable
         accessibilityRole="button"
         [accessibilityLabel]="'Seleccionar cliente ' + customer.name"
-        class="task-card rounded-2xl p-4"
+        class="task-card rounded-lg p-4"
         (press)="selected.emit(customer)"
         ><text class="task-title">{{ customer.name }}</text></pressable
       >

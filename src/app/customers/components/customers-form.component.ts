@@ -44,7 +44,7 @@ import {
       >
       @for (address of form().addresses; track $index; let index = $index) {
         <pressable
-          class="task-card rounded-2xl p-4 gap-1"
+          class="task-card rounded-lg p-4 gap-1"
           accessibilityRole="button"
           [accessibilityLabel]="'Editar dirección ' + (index + 1)"
           [disabled]="busy()"

@@ -1,12 +1,14 @@
 # Nora App
 
+[Identidad visual](docs/visual-identity.es.md) · [Diseño y UX](docs/ux-guidelines.es.md) · [Kit visual](docs/design-kit/README.es.md) · [Traspaso a desarrollo](docs/implementation-handoff.es.md).
+
 **N.O.R.A. — Notas, Organización, Registros y Administración.**
 
 Asistente Android para técnicos: clientes, presupuestos con materiales/mano de obra y PDF para compartir.
 
 ## Estado actual
 
-App Android con tareas de ejemplo en Inicio y pantallas CRUD locales de clientes/presupuestos. Tabs inferiores: Clientes · Inicio · Presupuestos. Ambos dominios tienen listas con búsqueda, botón circular para agregar, detalle completo y formularios de creación/edición. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Confirmaciones protegen acciones destructivas y cambios sin guardar. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. Tema claro terracota/oliva con tokens semánticos. El usuario probó la vista inicial en Expo Go; los nuevos CRUD, teclado/Atrás nativos y persistencia tras reiniciar Android todavía requieren validación en teléfono.
+App Android con resumen real del negocio, CRUD local de clientes/presupuestos y PDF para compartir offline. Tabs inferiores: Clientes · Inicio · Presupuestos; las opciones adicionales están en el menú lateral derecho. Los presupuestos usan listas compactas de materiales/mano de obra, editores dedicados, autoguardado/recuperación local y pantalla separada de vigencia/condiciones. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. La identidad aprobada usa verde petróleo, Noto Sans y el monograma de Nora. El usuario aceptó el aspecto revisado; las comprobaciones pendientes en teléfono figuran en [estado de implementación](docs/implementation-status.es.md).
 
 Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6 y Vitest 5. Versiones resueltas en package-lock.json. Vistas nativas mediante Fabric, no Ionic/WebView. Tailwind CSS 4 integrado con @ng-native/tailwind 0.13.0, Metro y src/styles.css; estilos globales nativos registrados en src/main.ts.
 
@@ -54,7 +56,7 @@ Validación: typecheck y suite actual correctos (interacciones nativas y dominio
 
 ## Pruebas unitarias
 
-Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 186 casos correctos en veintisiete archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite, Expo Crypto, Print, Sharing y FileSystem están simulados: esta suite no demuestra su ejecución nativa en el teléfono. `npm run typecheck` también correcto.
+Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 195 casos correctos en veintinueve archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite, Expo Crypto, Print, Sharing y FileSystem están simulados: esta suite no demuestra su ejecución nativa en el teléfono. `npm run typecheck` también correcto.
 
 ## Formato
 
@@ -66,7 +68,7 @@ Los componentes de página sólo enlazan signals y llaman servicios. `CustomersP
 
 Formularios con direcciones múltiples e ítems de materiales/mano de obra, cantidad, unidad y precio unitario. Guardar queda fuera del scroll; adaptación al teclado y Atrás Android mediante APIs nativas oficiales. Precios admiten coma o punto decimal, hasta dos decimales y sin separadores de miles. El pipe `money` muestra centavos como `$` (ARS) o `US$` (USD), con formato argentino. Cantidades de tres decimales; parciales y totales usan las mismas reglas del dominio. Cambiar moneda no convierte precios existentes.
 
-Crear un cliente primero; después preparar el presupuesto, seleccionar cliente/dirección y agregar ítems. Los borradores admiten lista de ítems vacía. Estados de presupuesto sólo para seguimiento local; compartir PDF es una acción independiente y no confirma entrega. Listas con scroll para el primer conjunto pequeño offline; se pueden virtualizar al crecer el volumen.
+Se puede comenzar un presupuesto antes de seleccionar cliente. Los textos incompletos y el editor separado se autoguardan localmente; revisar exige cliente, número y descripción válidos. Los borradores admiten lista de ítems vacía. Estados de presupuesto sólo para seguimiento local; compartir PDF es una acción independiente y no confirma entrega. Listas con scroll para el primer conjunto pequeño offline; se pueden virtualizar al crecer el volumen.
 
 Validación con interacciones de componentes, tests de dominio, flujo CRUD completo con storage simulado, conservación de formularios entre tabs, fuente simulada de Atrás nativo, formato monetario y conversión decimal. Export Android correcto; no se instaló ni probó el nuevo CRUD en teléfono durante esta iteración.
 
@@ -100,10 +102,14 @@ Validación del 2026-10-14: tipos, 158 tests, formato y export Android correctos
 
 ## PDF del presupuesto y compartir
 
-Desde el detalle de un presupuesto guardado, **Compartir PDF** genera un documento A4 offline mediante `expo-print` y abre el menú nativo de Android con `expo-sharing`. Primero completar el nombre obligatorio en Mi negocio. El documento incluye snapshot del cliente/dirección, perfil actual del negocio y logo opcional incrustado, descripción, materiales/mano de obra con cantidades/unidades, precios, parciales, total, ARS/USD, vigencia dd/MM/yyyy y notas públicas. Los borradores salen marcados BORRADOR, incluso si no tienen ítems. Los cálculos del dominio conservan el mismo redondeo en centavos de la app. Los textos se escapan y el documento no carga recursos externos.
+Desde el detalle de un presupuesto guardado, **Compartir PDF** genera un documento A4 offline mediante `pdf-lib` y `@pdf-lib/fontkit` y abre el menú nativo de Android con `expo-sharing`. Primero completar el nombre obligatorio en Mi negocio. El documento incluye snapshot del cliente/dirección, perfil actual del negocio y logo opcional incrustado, descripción, materiales/mano de obra con cantidades/unidades, precios, parciales, total, ARS/USD, vigencia dd/MM/yyyy y notas públicas. Los borradores salen marcados BORRADOR, incluso si no tienen ítems. Los cálculos del dominio conservan el mismo redondeo en centavos de la app. Los textos se dibujan directamente en el PDF y el documento no carga recursos externos.
 
-`EstimatePdfService` resuelve generación/archivos/share nativos; la plantilla HTML es una utilidad pura y los componentes sólo emiten acciones al servicio de página. Una copia privada con nombre único queda en `cache/estimate-pdfs` para que la app receptora termine de leerla. Nuevas exportaciones limpian las copias de más de 24 horas; el sistema puede liberar la caché antes. Esto no es backup ni archivo documental permanente. Los datos del prestador se leen al exportar; no son un snapshot histórico inmutable.
+`EstimatePdfService` resuelve assets/archivos/share locales; el generador de bytes PDF es una utilidad pura y los componentes sólo emiten acciones al servicio de página. Una copia privada con nombre único queda en `cache/estimate-pdfs` para que la app receptora termine de leerla. Nuevas exportaciones limpian las copias de más de 24 horas; el sistema puede liberar la caché antes. Esto no es backup ni archivo documental permanente. Los datos del prestador se leen al exportar; no son un snapshot histórico inmutable.
 
 Compartir no elige el contacto de WhatsApp, no confirma entrega ni cambia el estado. Elegir app/contacto y marcar como enviado son acciones separadas. Un error conserva el detalle y permite reintentar; mientras está ocupado se bloquean solicitudes repetidas.
 
-Validación: 186 tests en 27 archivos, tipos, formato y export Android correctos. Muestras PDF de Chromium revisadas visualmente con una página, 100 ítems y notas/descripciones extensas. Falta validar impresión, logo, paginación y compartir a otra app en Expo Go/Android real.
+La validación de esta rama figura en [estado de implementación y prueba manual](docs/implementation-status.es.md). Se revisaron visualmente PDFs del generador real, incluidos 50 renglones y notas extensas. Falta la ejecución en Android, logos y compartir antes de publicar.
+
+## Identidad visual y recuperación de borradores
+
+P1 petróleo + T2 Noto Sans offline + F1 precisa. Inicio/Mi negocio usa datos reales; menú desde la derecha y pestañas sólo en las tres pantallas principales. Los materiales y tareas se editan por separado, con carga repetida y cancelación aislada. `estimate-recovery.v1` conserva texto incompleto y editores interrumpidos con UUID estable y escrituras serializadas; revisar valida antes de crear/actualizar `estimates.v1`, sin debilitar sus contratos. Ver [implementación y prueba manual](docs/implementation-status.es.md).

@@ -1,4 +1,4 @@
-import { render, screen, userEvent } from "@ng-native/testing";
+import { render, screen, userEvent, fireEvent } from "@ng-native/testing";
 import { expect, test, vi } from "vitest";
 import { DateFieldComponent } from "./date-field.component";
 import { DatePickerService } from "../../services/date-picker.service";
@@ -34,4 +34,30 @@ test("cancelar el calendario conserva la fecha y quitarla emite un valor vacío"
   await userEvent.press(screen.getByRole("button", { name: "Quitar fecha" }));
   expect(valueChange).toHaveBeenCalledWith("");
   expect(pick).toHaveBeenCalledTimes(1);
+});
+
+test("bloquea la fecha y su borrado mientras abre el calendario, y los libera al cerrar", async () => {
+  let close!: (value: string | null) => void;
+  const pick = vi.fn().mockImplementation(
+    () =>
+      new Promise<string | null>((resolve) => {
+        close = resolve;
+      }),
+  );
+  const valueChange = vi.fn();
+  const result = await render(DateFieldComponent, {
+    inputs: { label: "Válido hasta", value: "2026-10-17" },
+    providers: [{ provide: DatePickerService, useValue: { pick } }],
+    on: { valueChange },
+  });
+  const field = screen.getByRole("button", { name: "Válido hasta" });
+  await fireEvent.press(field);
+  await fireEvent.press(field);
+  expect(pick).toHaveBeenCalledOnce();
+  await userEvent.press(screen.getByRole("button", { name: "Quitar fecha" }));
+  expect(valueChange).not.toHaveBeenCalled();
+  close(null);
+  await result.detectChanges();
+  await userEvent.press(screen.getByRole("button", { name: "Quitar fecha" }));
+  expect(valueChange).toHaveBeenCalledWith("");
 });

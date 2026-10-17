@@ -12,32 +12,21 @@ import type {
 @Component({
   selector: "nora-estimate-item-editor",
   imports: [Text, View, ActionButtonComponent, FormFieldComponent, MoneyPipe],
-  template: `<view class="task-card rounded-2xl p-4 gap-4">
-    <text class="section-title">Ítem {{ index() + 1 }}</text>
+  template: `<view class="task-card rounded-lg p-4 gap-4">
     <nora-field
       placeholder="Ej.: Pintura látex blanca"
       [required]="true"
-      [label]="'Descripción del ítem ' + (index() + 1)"
+      [label]="
+        item().type === 'material' ? 'Material *' : 'Trabajo a realizar *'
+      "
       [value]="item().description"
       [disabled]="busy()"
       (valueChange)="changed.emit({ description: $event })"
     />
-    <view class="flex-row gap-2">
-      @for (type of itemTypes(); track type.value) {
-        <nora-button
-          variant="choice"
-          [text]="type.label"
-          [label]="type.label + ' del ítem ' + (index() + 1)"
-          [selected]="item().type === type.value"
-          [disabled]="busy()"
-          (pressed)="changed.emit({ type: type.value })"
-        />
-      }
-    </view>
     <nora-field
       placeholder="Ej.: 2,5"
       [required]="true"
-      [label]="'Cantidad del ítem ' + (index() + 1)"
+      label="Cantidad *"
       keyboard="decimal-pad"
       [value]="item().quantity"
       [disabled]="busy()"
@@ -58,7 +47,7 @@ import type {
     </view>
     <nora-field
       [required]="true"
-      [label]="'Precio unitario del ítem ' + (index() + 1)"
+      label="Precio por unidad *"
       keyboard="decimal-pad"
       placeholder="Ej.: 1500,50"
       [value]="item().price"
@@ -70,13 +59,7 @@ import type {
         >Parcial: {{ subtotal()! | money: currency() }}</text
       >
     }
-    <nora-button
-      variant="danger"
-      text="Quitar ítem"
-      [label]="'Quitar ítem ' + (index() + 1)"
-      [disabled]="busy()"
-      (pressed)="removed.emit()"
-    />
+    <text class="muted">El renglón se incorpora al confirmar.</text>
   </view>`,
 })
 export class EstimateItemEditorComponent {

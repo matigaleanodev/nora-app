@@ -5,4 +5,5 @@ import { defineConfig } from "vitest/config";
 // Estas pruebas no requieren emulador ni demuestran ejecución en un dispositivo real.
 export default defineConfig({
   plugins: [ngNative()],
+  test: { setupFiles: ["src/app/shared/testing/native-modules.setup.ts"] },
 });

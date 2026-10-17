@@ -42,7 +42,7 @@ import type { Customer } from "../models/customer.model";
         <pressable
           accessibilityRole="button"
           [accessibilityLabel]="'Ver cliente ' + customer.name"
-          class="task-card rounded-2xl p-4 gap-2"
+          class="compact-row gap-2"
           (press)="opened.emit(customer)"
         >
           <view class="flex-row justify-between items-center gap-3"
@@ -58,7 +58,7 @@ import type { Customer } from "../models/customer.model";
           }
         </pressable>
       } @empty {
-        <view class="task-card rounded-2xl p-6 gap-2"
+        <view class="task-card rounded-lg p-6 gap-2"
           ><text class="section-title">Todavía no hay clientes acá.</text
           ><text class="muted"
             >Usá + para agregar uno o probá otra búsqueda.</text

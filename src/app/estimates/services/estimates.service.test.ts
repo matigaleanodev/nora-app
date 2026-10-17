@@ -210,7 +210,7 @@ describe("operaciones de presupuestos", () => {
     });
     await expect(
       estimates.setStatus(estimate.id, EstimateStatus.Sent),
-    ).rejects.toThrow("ítem");
+    ).rejects.toThrow("material o tarea");
     await expect(
       estimates.setStatus(estimate.id, EstimateStatus.Accepted),
     ).rejects.toThrow("estado");
@@ -293,4 +293,16 @@ describe("operaciones de presupuestos", () => {
       "Pintura de cocina",
     );
   });
+});
+
+test("conserva el UUID del borrador recuperado y rechaza duplicarlo", async () => {
+  const { customers, estimates } = setup();
+  const customer = await customers.create({ name: "Cliente", addresses: [] });
+  const id = "99999999-9999-4999-8999-999999999999";
+  const saved = await estimates.create(input(customer.id), id);
+  expect(saved.id).toBe(id);
+  await expect(estimates.create(input(customer.id), id)).rejects.toThrow(
+    "ya existe",
+  );
+  expect(await estimates.getAll()).toHaveLength(1);
 });

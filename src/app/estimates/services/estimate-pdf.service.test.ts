@@ -5,24 +5,32 @@ import { BusinessProfileService } from "../../business/services/business-profile
 import { IdService } from "../../shared/services/id.service";
 import { estimateFixture } from "../../shared/testing/domain-fixtures";
 import type { BusinessProfile } from "../../business/models/business-profile.model";
-
 const native = vi.hoisted(() => ({
-  print: vi.fn(),
+  build: vi.fn(),
   share: vi.fn(),
   available: vi.fn(),
-  deleted: vi.fn(),
-  files: new Map<
-    string,
-    { size: number; modified: number | null; content?: string }
-  >(),
-  copyFails: false,
-  deleteFails: false,
+  download: vi.fn(),
+  writeFails: false,
+  incomplete: false,
+  files: new Map<string, { bytes: Uint8Array; modified: number | null }>(),
 }));
-vi.mock("expo-print", () => ({ printToFileAsync: native.print }));
+vi.mock("../utils/estimate-pdf-document", () => ({
+  buildEstimatePdf: native.build,
+}));
 vi.mock("expo-sharing", () => ({
   shareAsync: native.share,
   isAvailableAsync: native.available,
 }));
+vi.mock("expo-asset", () => ({
+  Asset: {
+    fromModule: () => ({
+      localUri: "file:///assets/font.ttf",
+      downloadAsync: native.download,
+    }),
+  },
+}));
+vi.mock("../../../../assets/NotoSans.ttf", () => ({ default: 1 }));
+vi.mock("../../../../assets/NotoSans-Bold.ttf", () => ({ default: 2 }));
 vi.mock("expo-file-system", () => {
   const uri = (base: string | { uri: string }, name?: string) =>
     (typeof base === "string" ? base : base.uri).replace(/\/$/, "") +
@@ -48,7 +56,7 @@ vi.mock("expo-file-system", () => {
       return native.files.has(this.uri);
     }
     get size() {
-      return native.files.get(this.uri)?.size ?? 0;
+      return native.files.get(this.uri)?.bytes.length ?? 0;
     }
     get modificationTime() {
       return native.files.get(this.uri)?.modified ?? null;
@@ -59,16 +67,17 @@ vi.mock("expo-file-system", () => {
     get parentDirectory() {
       return { uri: this.uri.slice(0, this.uri.lastIndexOf("/") + 1) };
     }
-    async base64() {
-      return native.files.get(this.uri)?.content ?? "YQ==";
+    async bytes() {
+      return native.files.get(this.uri)?.bytes ?? new Uint8Array([1]);
     }
-    copy(target: File) {
-      native.files.set(target.uri, { size: this.size, modified: Date.now() });
-      if (native.copyFails) throw new Error("Copia fallida.");
+    write(bytes: Uint8Array) {
+      native.files.set(this.uri, {
+        bytes: native.incomplete ? bytes.slice(0, 2) : bytes,
+        modified: Date.now(),
+      });
+      if (native.writeFails) throw new Error("Escritura fallida.");
     }
     delete() {
-      if (native.deleteFails) throw new Error("Limpieza fallida.");
-      native.deleted(this.uri);
       native.files.delete(this.uri);
     }
   }
@@ -83,183 +92,153 @@ vi.mock("expo-file-system", () => {
 });
 const profile: BusinessProfile = {
   displayName: "Electricidad Juan",
-  updatedAt: "2026-10-14T12:00:00Z",
+  updatedAt: "2026-10-16T12:00:00Z",
 };
-const generatedUri = "file:///cache/Print/generated.pdf";
-const targetUri = "file:///cache/estimate-pdfs/Presupuesto-P-001-123.pdf";
-const logoUri = "file:///documents/business-logos/logo.png";
+const target = "file:///cache/estimate-pdfs/Presupuesto-P-001-123.pdf";
+const bytes = new Uint8Array([37, 80, 68, 70, 45, 49, 55]);
 function setup(value: BusinessProfile | null = profile) {
-  const get = vi.fn().mockResolvedValue(value);
-  return {
-    service: injectService(EstimatePdfService, {
-      providers: [
-        { provide: BusinessProfileService, useValue: { get } },
-        {
-          provide: IdService,
-          useValue: { create: vi.fn().mockResolvedValue("123") },
-        },
-      ],
-    }),
-    get,
-  };
+  return injectService(EstimatePdfService, {
+    providers: [
+      { provide: BusinessProfileService, useValue: { get: async () => value } },
+      { provide: IdService, useValue: { create: async () => "123" } },
+    ],
+  });
 }
 beforeEach(() => {
   vi.clearAllMocks();
   native.files.clear();
-  native.copyFails = false;
-  native.deleteFails = false;
+  native.writeFails = false;
+  native.incomplete = false;
+  native.build.mockResolvedValue(bytes);
   native.available.mockResolvedValue(true);
   native.share.mockResolvedValue(undefined);
-  native.print.mockImplementation(async () => {
-    native.files.set(generatedUri, { size: 1200, modified: Date.now() });
-    return { uri: generatedUri, numberOfPages: 1 };
-  });
+  native.download.mockResolvedValue(undefined);
 });
-
-test("requiere los datos del prestador antes de generar archivos", async () => {
-  await expect(setup(null).service.share(estimateFixture)).rejects.toThrow(
+test("requiere el prestador y la disponibilidad nativa antes de generar", async () => {
+  await expect(setup(null).share(estimateFixture)).rejects.toThrow(
     "Mi negocio",
   );
-  expect(native.print).not.toHaveBeenCalled();
-  expect(native.share).not.toHaveBeenCalled();
-});
-test("informa si el sistema no puede compartir y evita crear un PDF inútil", async () => {
   native.available.mockResolvedValue(false);
-  await expect(setup().service.share(estimateFixture)).rejects.toThrow(
-    "dispositivo",
-  );
-  expect(native.print).not.toHaveBeenCalled();
+  await expect(setup().share(estimateFixture)).rejects.toThrow("dispositivo");
+  expect(native.build).not.toHaveBeenCalled();
 });
-test("genera A4 con el snapshot y comparte una copia local sin modificar el presupuesto", async () => {
-  const previous = JSON.stringify(estimateFixture);
-  await setup().service.share(estimateFixture);
-  expect(native.print).toHaveBeenCalledWith(
-    expect.objectContaining({
-      width: 595,
-      height: 842,
-      html: expect.stringContaining("Ana García"),
-    }),
+test("escribe bytes PDF verificados antes de compartir y conserva el documento", async () => {
+  const original = structuredClone(estimateFixture);
+  await setup().share(estimateFixture);
+  expect(native.build).toHaveBeenCalledWith(
+    estimateFixture,
+    profile,
+    { regular: expect.any(Uint8Array), bold: expect.any(Uint8Array) },
+    undefined,
   );
+  expect(native.files.get(target)?.bytes).toEqual(bytes);
   expect(native.share).toHaveBeenCalledWith(
-    targetUri,
+    target,
     expect.objectContaining({ mimeType: "application/pdf" }),
   );
-  expect(native.files.has(targetUri)).toBe(true);
-  expect(native.files.has(generatedUri)).toBe(false);
-  expect(JSON.stringify(estimateFixture)).toBe(previous);
+  expect(estimateFixture).toEqual(original);
 });
-test("incrusta el logo privado en base64 sin borrar el original ni cargar URLs", async () => {
-  native.files.set(logoUri, {
-    size: 12,
-    modified: Date.now(),
-    content: "aGVsbG8=",
-  });
-  await setup({
-    ...profile,
-    logo: { uri: logoUri, mimeType: "image/png" },
-  }).service.share(estimateFixture);
-  expect(native.print.mock.calls[0][0].html).toContain(
-    'src="data:image/png;base64,aGVsbG8="',
-  );
-  expect(native.print.mock.calls[0][0].html).not.toContain(logoUri);
-  expect(native.files.has(logoUri)).toBe(true);
-});
-test.each([
-  [logoUri, 0],
-  [logoUri, 6 * 1024 * 1024],
-  ["file:///documents/private.png", 12],
-])(
-  "rechaza un logo ilegible o ajeno al directorio privado (%s, %s)",
-  async (uri, size) => {
-    if (size) native.files.set(uri, { size, modified: Date.now() });
-    await expect(
-      setup({ ...profile, logo: { uri, mimeType: "image/png" } }).service.share(
-        estimateFixture,
-      ),
-    ).rejects.toThrow("logo");
-    expect(native.print).not.toHaveBeenCalled();
+test.each([new Uint8Array(), new Uint8Array([1, 2, 3, 4, 5, 6])])(
+  "rechaza un resultado vacío o que no sea PDF",
+  async (result) => {
+    native.build.mockResolvedValue(result);
+    await expect(setup().share(estimateFixture)).rejects.toThrow(
+      "generar el PDF",
+    );
+    expect(native.share).not.toHaveBeenCalled();
   },
 );
-test("un fallo del generador se propaga sin abrir el selector", async () => {
-  native.print.mockRejectedValueOnce(new Error("Impresión fallida."));
-  await expect(setup().service.share(estimateFixture)).rejects.toThrow(
-    "Impresión fallida",
-  );
-  expect(native.share).not.toHaveBeenCalled();
-  expect(native.files.has(targetUri)).toBe(false);
-});
-test("una copia incompleta limpia el parcial y el temporal sin compartirlos", async () => {
-  native.copyFails = true;
-  await expect(setup().service.share(estimateFixture)).rejects.toThrow(
-    "Copia fallida",
-  );
-  expect(native.files.has(targetUri)).toBe(false);
-  expect(native.files.has(generatedUri)).toBe(false);
-  expect(native.share).not.toHaveBeenCalled();
-});
-test("un fallo al abrir el selector conserva la copia y permite reintentar", async () => {
-  native.share.mockRejectedValueOnce(new Error("No se pudo abrir."));
-  const { service } = setup();
-  await expect(service.share(estimateFixture)).rejects.toThrow(
-    "No se pudo abrir",
-  );
-  expect(native.files.has(targetUri)).toBe(true);
-  expect(native.files.has(generatedUri)).toBe(false);
+test.each(["writeFails", "incomplete"] as const)(
+  "elimina escrituras parciales y no comparte: %s",
+  async (failure) => {
+    native[failure] = true;
+    await expect(setup().share(estimateFixture)).rejects.toThrow();
+    expect(native.files.has(target)).toBe(false);
+    expect(native.share).not.toHaveBeenCalled();
+  },
+);
+test("conserva la copia si falla compartir y permite reintentar", async () => {
+  native.share.mockRejectedValueOnce(new Error("Selector no disponible"));
+  const service = setup();
+  await expect(service.share(estimateFixture)).rejects.toThrow("Selector");
+  expect(native.files.has(target)).toBe(true);
   await expect(service.share(estimateFixture)).resolves.toBeUndefined();
+  expect(native.download).toHaveBeenCalledTimes(2);
+  expect(native.build).toHaveBeenCalledOnce();
 });
-test("limpia sólo PDFs antiguos de su caché y conserva los recientes y otros archivos", async () => {
-  const old = "file:///cache/estimate-pdfs/old.pdf";
-  const recent = "file:///cache/estimate-pdfs/recent.pdf";
-  const unknown = "file:///cache/estimate-pdfs/unknown.pdf";
-  const other = "file:///cache/estimate-pdfs/data.json";
-  for (const uri of [old, other])
-    native.files.set(uri, { size: 10, modified: Date.now() - 2 * 86400000 });
-  native.files.set(recent, { size: 10, modified: Date.now() });
-  native.files.set(unknown, { size: 10, modified: null });
-  await setup().service.share(estimateFixture);
-  expect(native.files.has(old)).toBe(false);
-  for (const uri of [recent, other, unknown, targetUri])
-    expect(native.files.has(uri)).toBe(true);
-});
-test("una limpieza fallida no impide generar ni compartir el documento", async () => {
-  native.files.set("file:///cache/estimate-pdfs/old.pdf", {
-    size: 10,
-    modified: Date.now() - 2 * 86400000,
+test("incluye el logo privado sin leer archivos ajenos", async () => {
+  const uri = "file:///documents/business-logos/logo.png";
+  native.files.set(uri, {
+    bytes: new Uint8Array([1, 2, 3]),
+    modified: Date.now(),
   });
-  native.deleteFails = true;
-  await expect(setup().service.share(estimateFixture)).resolves.toBeUndefined();
-  expect(native.share).toHaveBeenCalledOnce();
+  await setup({ ...profile, logo: { uri, mimeType: "image/png" } }).share(
+    estimateFixture,
+  );
+  expect(native.build.mock.calls[0][3]).toEqual({
+    bytes: new Uint8Array([1, 2, 3]),
+    mimeType: "image/png",
+  });
+  await expect(
+    setup({
+      ...profile,
+      logo: { uri: "file:///private.png", mimeType: "image/png" },
+    }).share(estimateFixture),
+  ).rejects.toThrow("logo");
+  expect(native.files.has(uri)).toBe(true);
 });
-test("el número visible no puede escribir una ruta fuera del directorio de PDF", async () => {
-  await setup().service.share({ ...estimateFixture, number: "../../Juan/.." });
-  const path: string = native.share.mock.calls[0][0];
-  expect(path).toBe("file:///cache/estimate-pdfs/Presupuesto-Juan-123.pdf");
+test("limpia sólo PDFs vencidos de su caché", async () => {
+  const old = "file:///cache/estimate-pdfs/old.pdf";
+  const other = "file:///cache/estimate-pdfs/data.json";
+  const recent = "file:///cache/estimate-pdfs/recent.pdf";
+  for (const uri of [old, other])
+    native.files.set(uri, { bytes, modified: Date.now() - 2 * 86400000 });
+  native.files.set(recent, { bytes, modified: Date.now() });
+  await setup().share(estimateFixture);
+  expect(native.files.has(old)).toBe(false);
+  expect(native.files.has(other)).toBe(true);
+  expect(native.files.has(recent)).toBe(true);
+});
+test("un número visible no puede salir del directorio de PDFs", async () => {
+  await setup().share({ ...estimateFixture, number: "../../Juan/.." });
+  expect(native.share.mock.calls[0][0]).toBe(
+    "file:///cache/estimate-pdfs/Presupuesto-Juan-123.pdf",
+  );
 });
 
-test("rechaza un resultado de impresión sin archivo y no abre el selector", async () => {
-  native.print.mockResolvedValueOnce({ uri: generatedUri, numberOfPages: 0 });
-  await expect(setup().service.share(estimateFixture)).rejects.toThrow(
-    "generar el PDF",
-  );
-  expect(native.share).not.toHaveBeenCalled();
-});
-test("dos exportaciones conservan copias independientes para las apps receptoras", async () => {
-  const create = vi
-    .fn()
-    .mockResolvedValueOnce("primera")
-    .mockResolvedValueOnce("segunda");
-  const service = injectService(EstimatePdfService, {
-    providers: [
-      {
-        provide: BusinessProfileService,
-        useValue: { get: vi.fn().mockResolvedValue(profile) },
-      },
-      { provide: IdService, useValue: { create } },
-    ],
-  });
+test("reutiliza el archivo intacto y lo regenera al cambiar un importe o el perfil", async () => {
+  const value = { ...profile };
+  const service = setup(value);
   await service.share(estimateFixture);
-  await service.share(estimateFixture);
-  const paths = native.share.mock.calls.map((call) => call[0]);
-  expect(paths[0]).not.toBe(paths[1]);
-  for (const path of paths) expect(native.files.has(path)).toBe(true);
+  await service.share(structuredClone(estimateFixture));
+  expect(native.build).toHaveBeenCalledOnce();
+  const edited = {
+    ...estimateFixture,
+    items: [{ ...estimateFixture.items[0], unitPriceCents: 999999 }],
+  };
+  await service.share(edited);
+  expect(native.build).toHaveBeenCalledTimes(2);
+  value.displayName = "Nombre actualizado";
+  await service.share(edited);
+  expect(native.build).toHaveBeenCalledTimes(3);
+  expect(native.share).toHaveBeenCalledTimes(4);
 });
+
+test.each(["ausente", "incompleto", "vencido"])(
+  "regenera un PDF en caché %s antes de compartir",
+  async (state) => {
+    const service = setup();
+    await service.share(estimateFixture);
+    if (state === "ausente") native.files.delete(target);
+    else if (state === "incompleto")
+      native.files.set(target, {
+        bytes: bytes.slice(0, 2),
+        modified: Date.now(),
+      });
+    else
+      native.files.set(target, { bytes, modified: Date.now() - 2 * 86400000 });
+    await service.share(estimateFixture);
+    expect(native.build).toHaveBeenCalledTimes(2);
+    expect(native.files.get(target)?.bytes).toEqual(bytes);
+  },
+);

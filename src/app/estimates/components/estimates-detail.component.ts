@@ -1,5 +1,5 @@
 import { CalendarDatePipe } from "../../shared/pipes/calendar-date.pipe";
-import { Component, input, output } from "@angular/core";
+import { Component, computed, input, output } from "@angular/core";
 import { Text, View } from "@ng-native/components";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
 import { MoneyPipe } from "../../shared/pipes/money.pipe";
@@ -19,53 +19,63 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
     EstimateItemCardComponent,
   ],
   template: `<view class="gap-4">
-    <view class="task-card rounded-2xl p-5 gap-3">
-      <text class="section-title">{{ estimate().number }}</text
+    <view class="gap-2">
+      <text class="task-title">{{ estimate().number }}</text
       ><text class="example-badge"
         >{{ statusLabels()[estimate().status] }} ·
         {{ estimate().currency }}</text
       >
       <text class="task-title">{{ estimate().customerSnapshot.name }}</text>
       @if (estimate().customerSnapshot.phone; as phone) {
-        <text class="body-text"
-          >+549{{ phone.areaCode }}{{ phone.number }} · WhatsApp:
-          {{ phone.whatsapp ? "Sí" : "No" }}</text
-        >
+        <text class="footnote">+549{{ phone.areaCode }}{{ phone.number }}</text>
       }
       @if (estimate().customerSnapshot.email) {
-        <text class="body-text">{{ estimate().customerSnapshot.email }}</text>
+        <text class="footnote">{{ estimate().customerSnapshot.email }}</text>
       }
-      <text class="body-text">{{ estimate().description }}</text
-      ><text class="muted"
-        >Válido hasta:
-        {{ (estimate().validUntil | calendarDate) || "Sin vencimiento" }}</text
-      >
-      @if (estimate().notes) {
-        <text class="body-text">{{ estimate().notes }}</text>
-      }
+      <text class="body-text">{{ estimate().description }}</text>
     </view>
     @if (estimate().customerSnapshot.address; as address) {
       <nora-address-card [address]="address" />
     }
-    <text class="section-title">Detalle del trabajo</text>
-    @for (row of items(); track row.item.id) {
-      <nora-estimate-item-card [row]="row" [currency]="estimate().currency" />
-    } @empty {
-      <text class="muted">Borrador sin ítems.</text>
+    @for (group of groups(); track group.type) {
+      @if (group.rows.length) {
+        <view class="gap-2">
+          <view class="flex-row justify-between items-center gap-3">
+            <text class="section-title">{{
+              group.type === "material" ? "Materiales" : "Mano de obra"
+            }}</text>
+            <text class="footnote"
+              >Subtotal {{ group.subtotal | money: estimate().currency }}</text
+            > </view
+          ><view>
+            @for (row of group.rows; track row.item.id) {
+              <nora-estimate-item-card
+                [row]="row"
+                [currency]="estimate().currency"
+              />
+            }</view
+        ></view>
+      }
     }
-    <view class="summary-card rounded-2xl p-5 gap-2"
-      ><text class="summary-label">TOTAL · {{ estimate().currency }}</text
-      ><text class="summary-amount">{{
+    @if (!items().length) {
+      <text class="muted">Borrador sin materiales ni tareas.</text>
+    }
+    <view class="total-row flex-row justify-between items-center gap-3"
+      ><text class="task-title">Total · {{ estimate().currency }}</text
+      ><text class="total-amount">{{
         total() | money: estimate().currency
       }}</text></view
     >
-    <nora-button
-      variant="primary"
-      label="Compartir PDF"
-      [text]="busy() ? 'Preparando…' : 'Compartir PDF'"
-      [disabled]="busy()"
-      (pressed)="pdfShared.emit()"
-    />
+    <text class="footnote"
+      >Válido hasta:
+      {{ (estimate().validUntil | calendarDate) || "Sin vencimiento" }}</text
+    >
+    @if (estimate().notes) {
+      <view class="gap-1"
+        ><text class="task-title">Notas y condiciones</text
+        ><text class="body-text">{{ estimate().notes }}</text></view
+      >
+    }
     @if (estimate().status === "draft") {
       <nora-button
         variant="secondary"
@@ -74,7 +84,7 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
         (pressed)="edit.emit()"
       />
       <nora-button
-        variant="danger"
+        variant="danger-link"
         text="Eliminar borrador"
         [disabled]="busy()"
         (pressed)="deleted.emit()"
@@ -94,13 +104,22 @@ import { EstimateItemCardComponent } from "./estimate-item-card.component";
   </view>`,
 })
 export class EstimatesDetailComponent {
+  protected readonly groups = computed(() =>
+    ["material", "labor"].map((type) => {
+      const rows = this.items().filter((row) => row.item.type === type);
+      return {
+        type,
+        rows,
+        subtotal: rows.reduce((sum, row) => sum + row.subtotalCents, 0),
+      };
+    }),
+  );
   readonly estimate = input.required<Estimate>();
   readonly items = input.required<readonly EstimateItemRow[]>();
   readonly total = input.required<number>();
   readonly statusLabels = input.required<Record<EstimateStatus, string>>();
   readonly nextStatuses = input.required<readonly EstimateStatus[]>();
   readonly busy = input(false);
-  readonly pdfShared = output<void>();
   readonly edit = output<void>();
   readonly deleted = output<void>();
   readonly statusChanged = output<EstimateStatus>();

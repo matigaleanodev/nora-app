@@ -5,7 +5,7 @@ import type { CustomerAddress } from "../models/customer.model";
   selector: "nora-address-card",
   imports: [Text, View],
   template: `
-    <view class="task-card rounded-2xl p-4 gap-2">
+    <view class="task-card rounded-lg p-4 gap-2">
       <text class="task-title">{{ address().name }}</text>
       <text class="body-text"
         >{{ address().street }} {{ address().streetNumber }}</text

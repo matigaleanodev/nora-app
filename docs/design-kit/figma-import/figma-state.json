@@ -1,0 +1,316 @@
+{
+  "mutatedNodeIds": [
+    "8:495",
+    "I8:495;6:29",
+    "8:894",
+    "I8:894;6:29",
+    "8:984",
+    "I8:984;6:29",
+    "8:1104",
+    "I8:1104;6:29",
+    "8:1127",
+    "I8:1127;6:29",
+    "8:1149",
+    "I8:1149;6:29",
+    "8:1183",
+    "I8:1183;6:29",
+    "8:1221",
+    "I8:1221;6:29",
+    "8:1253",
+    "I8:1253;6:29",
+    "8:1278",
+    "I8:1278;6:29",
+    "8:1294",
+    "I8:1294;6:29",
+    "3:97"
+  ],
+  "fileKey": "aCVZWB5QOP3spoGNdXhxvx",
+  "date": "2026-10-17",
+  "status": "verified",
+  "pages": [
+    {
+      "id": "0:1",
+      "name": "00 · Identidad y documento"
+    },
+    {
+      "id": "3:96",
+      "name": "01 · Componentes"
+    },
+    {
+      "id": "3:97",
+      "name": "02 · Pantallas y flujos"
+    }
+  ],
+  "screens": [
+    {
+      "nodeId": "8:2",
+      "sourceId": "home",
+      "name": "home · Mi negocio"
+    },
+    {
+      "nodeId": "8:74",
+      "sourceId": "menu",
+      "name": "menu · Menú"
+    },
+    {
+      "nodeId": "8:110",
+      "sourceId": "business-form",
+      "name": "business-form · Datos del negocio"
+    },
+    {
+      "nodeId": "8:157",
+      "sourceId": "business-logo",
+      "name": "business-logo · Logo del negocio"
+    },
+    {
+      "nodeId": "8:173",
+      "sourceId": "clients",
+      "name": "clients · Clientes"
+    },
+    {
+      "nodeId": "8:239",
+      "sourceId": "client-detail",
+      "name": "client-detail · Ana Rodríguez"
+    },
+    {
+      "nodeId": "8:292",
+      "sourceId": "client-form",
+      "name": "client-form · Nuevo cliente"
+    },
+    {
+      "nodeId": "8:347",
+      "sourceId": "address-form",
+      "name": "address-form · Dirección"
+    },
+    {
+      "nodeId": "8:381",
+      "sourceId": "client-contact",
+      "name": "client-contact · Contactar a Ana"
+    },
+    {
+      "nodeId": "8:418",
+      "sourceId": "estimates",
+      "name": "estimates · Presupuestos"
+    },
+    {
+      "nodeId": "8:486",
+      "sourceId": "estimate-form",
+      "name": "estimate-form · Nuevo presupuesto"
+    },
+    {
+      "nodeId": "8:575",
+      "sourceId": "estimate-options",
+      "name": "estimate-options · Vigencia y condiciones"
+    },
+    {
+      "nodeId": "8:610",
+      "sourceId": "choose-client",
+      "name": "choose-client · Elegir cliente"
+    },
+    {
+      "nodeId": "8:642",
+      "sourceId": "material-new",
+      "name": "material-new · Agregar material"
+    },
+    {
+      "nodeId": "8:682",
+      "sourceId": "material-edit",
+      "name": "material-edit · Editar material"
+    },
+    {
+      "nodeId": "8:722",
+      "sourceId": "labor-new",
+      "name": "labor-new · Agregar mano de obra"
+    },
+    {
+      "nodeId": "8:762",
+      "sourceId": "labor-edit",
+      "name": "labor-edit · Editar mano de obra"
+    },
+    {
+      "nodeId": "8:802",
+      "sourceId": "delete-line",
+      "name": "delete-line · Eliminar material"
+    },
+    {
+      "nodeId": "8:817",
+      "sourceId": "estimate-review",
+      "name": "estimate-review · Revisar presupuesto"
+    },
+    {
+      "nodeId": "8:885",
+      "sourceId": "estimate-detail",
+      "name": "estimate-detail · Presupuesto P-014"
+    },
+    {
+      "nodeId": "8:958",
+      "sourceId": "share-preview",
+      "name": "share-preview · Compartir presupuesto"
+    },
+    {
+      "nodeId": "8:975",
+      "sourceId": "estimate-sent",
+      "name": "estimate-sent · Presupuesto P-014"
+    },
+    {
+      "nodeId": "8:999",
+      "sourceId": "help",
+      "name": "help · Ayuda"
+    },
+    {
+      "nodeId": "8:1017",
+      "sourceId": "about",
+      "name": "about · Acerca de Nora"
+    },
+    {
+      "nodeId": "8:1031",
+      "sourceId": "clients-empty",
+      "name": "clients-empty · Clientes"
+    },
+    {
+      "nodeId": "8:1063",
+      "sourceId": "estimates-empty",
+      "name": "estimates-empty · Presupuestos"
+    },
+    {
+      "nodeId": "8:1095",
+      "sourceId": "estimate-pending",
+      "name": "estimate-pending · Nuevo presupuesto"
+    },
+    {
+      "nodeId": "8:1118",
+      "sourceId": "estimate-error",
+      "name": "estimate-error · Nuevo presupuesto"
+    },
+    {
+      "nodeId": "8:1140",
+      "sourceId": "estimate-incomplete",
+      "name": "estimate-incomplete · Revisar presupuesto"
+    },
+    {
+      "nodeId": "8:1174",
+      "sourceId": "estimate-undo",
+      "name": "estimate-undo · Nuevo presupuesto"
+    },
+    {
+      "nodeId": "8:1194",
+      "sourceId": "resume-draft",
+      "name": "resume-draft · Continuar borrador"
+    },
+    {
+      "nodeId": "16:530",
+      "sourceId": "material-next",
+      "name": "material-next · Cargar otro material"
+    },
+    {
+      "nodeId": "16:570",
+      "sourceId": "labor-next",
+      "name": "labor-next · Cargar otro trabajo"
+    },
+    {
+      "nodeId": "8:1211",
+      "sourceId": "future-agenda",
+      "name": "future-agenda · Agenda"
+    },
+    {
+      "nodeId": "8:1243",
+      "sourceId": "future-appearance",
+      "name": "future-appearance · Apariencia"
+    },
+    {
+      "nodeId": "8:1268",
+      "sourceId": "future-backup",
+      "name": "future-backup · Copias de seguridad"
+    },
+    {
+      "nodeId": "8:1284",
+      "sourceId": "future-assistant",
+      "name": "future-assistant · Asistente Nora"
+    }
+  ],
+  "counts": {
+    "baseScreens": 35,
+    "repeatedEntryVariants": 2,
+    "totalFrames": 37,
+    "editableTexts": 460,
+    "componentInstances": 158,
+    "linkedControls": 132,
+    "variables": 39,
+    "textStyles": 5,
+    "mainComponents": 15,
+    "buttonVariants": 12
+  },
+  "prototype": {
+    "starts": [
+      {
+        "nodeId": "8:2",
+        "name": "01 · Circuito completo de presupuesto"
+      },
+      {
+        "nodeId": "8:1031",
+        "name": "02 · Vacíos y recuperación"
+      },
+      {
+        "nodeId": "8:1211",
+        "name": "03 · Futuro · Agenda"
+      },
+      {
+        "nodeId": "8:1243",
+        "name": "04 · Futuro · Apariencia"
+      },
+      {
+        "nodeId": "8:1268",
+        "name": "05 · Futuro · Copias de seguridad"
+      },
+      {
+        "nodeId": "8:1284",
+        "name": "06 · Futuro · Asistente"
+      },
+      {
+        "nodeId": "8:1118",
+        "name": "07 · Error de guardado"
+      },
+      {
+        "nodeId": "8:1140",
+        "name": "08 · Revisión incompleta"
+      },
+      {
+        "nodeId": "8:1194",
+        "name": "09 · Recuperar borrador"
+      }
+    ],
+    "invalidDestinations": [],
+    "mainFlow": [
+      "8:2",
+      "8:486",
+      "8:610",
+      "8:642",
+      "8:817",
+      "8:958"
+    ]
+  },
+  "pdf": {
+    "nodeId": "17:2",
+    "width": 595,
+    "height": 842,
+    "editableTexts": 41
+  },
+  "visualReview": [
+    "Mi negocio",
+    "Nuevo presupuesto",
+    "Revisar presupuesto",
+    "Menú derecho",
+    "Editor repetido",
+    "Error",
+    "Agenda futura",
+    "Componentes",
+    "PDF A4"
+  ],
+  "revision": "Vigencia y condiciones: pantalla dedicada; resumen antes de materiales. Número editable y moneda en formulario principal.",
+  "retiredNodeIds": [
+    "8:500",
+    "8:584",
+    "8:596"
+  ],
+  "replacementNumberFieldId": "30:512"
+}

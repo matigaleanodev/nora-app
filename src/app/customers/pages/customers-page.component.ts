@@ -2,7 +2,6 @@ import { Component, DestroyRef, inject } from "@angular/core";
 import { View } from "@ng-native/components";
 import { PageLayoutComponent } from "../../shared/components/page-layout/page-layout.component";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
-import { FabComponent } from "../../shared/components/fab/fab.component";
 import { CustomersPageService } from "../services/customers-page.service";
 import { CustomersListComponent } from "../components/customers-list.component";
 import { CustomersDetailComponent } from "../components/customers-detail.component";
@@ -13,7 +12,6 @@ import { CustomersFormComponent } from "../components/customers-form.component";
     View,
     PageLayoutComponent,
     ActionButtonComponent,
-    FabComponent,
     CustomersListComponent,
     CustomersDetailComponent,
     CustomersFormComponent,
@@ -64,18 +62,19 @@ import { CustomersFormComponent } from "../components/customers-form.component";
         }
       }
 
-      <view page-fab class="fab-layer" pointerEvents="box-none">
-        @if (vm.screen() === "list") {
-          <nora-fab
-            label="Agregar cliente"
-            [disabled]="vm.loading() || !!vm.error()"
-            (pressed)="vm.create()"
-          />
-        }
-      </view>
       <view page-footer>
+        @if (vm.screen() === "list") {
+          <view class="form-footer px-4 py-3"
+            ><nora-button
+              text="Nuevo cliente"
+              label="Agregar cliente"
+              variant="primary"
+              [disabled]="vm.loading() || !!vm.error()"
+              (pressed)="vm.create()"
+          /></view>
+        }
         @if (vm.screen() === "form") {
-          <view class="form-footer px-6 py-3"
+          <view class="form-footer px-4 py-3"
             ><nora-button
               variant="primary"
               label="Guardar cliente"

@@ -91,13 +91,12 @@ test("el editor de ítem emite el precio como texto y delega la eliminación", a
     on: { changed, removed },
   });
   await fireEvent.changeText(
-    screen.getByLabelText("Precio unitario del ítem 1"),
+    screen.getByLabelText("Precio por unidad *"),
     "10,25",
   );
   expect(changed).toHaveBeenCalledWith({ price: "10,25" });
   expect(item.price).toBe("10");
-  await userEvent.press(screen.getByRole("button", { name: "Quitar ítem 1" }));
-  expect(removed).toHaveBeenCalledOnce();
+  expect(removed).not.toHaveBeenCalled();
 });
 test("selección de cliente y dirección sólo emite las intenciones del usuario", async () => {
   const choose = vi.fn();
@@ -124,9 +123,10 @@ test("el selector recibe clientes filtrados y comunica la selección", async () 
   );
   expect(selected).toHaveBeenCalledWith(customerFixture);
 });
-test("el formulario de presupuesto comunica cambios de moneda y muestra el total recibido", async () => {
+test("el formulario delega moneda y condiciones sin duplicar el total ni desplegar campos ocultos", async () => {
   const changed = vi.fn();
-  const itemAdded = vi.fn();
+  const typeAdded = vi.fn();
+  const conditionsEdited = vi.fn();
   const form = {
     number: "",
     clientId: "",
@@ -143,14 +143,21 @@ test("el formulario de presupuesto comunica cambios de moneda y muestra el total
       preview: { total: 12345, subtotals: [], error: "" },
       currencies: [Currency.ARS, Currency.USD],
       units: UNIT_OPTIONS,
-      itemTypes: [],
+      itemTypes: [{ value: EstimateItemType.Material, label: "Material" }],
     },
-    on: { changed, itemAdded },
+    on: { changed, typeAdded, conditionsEdited },
   });
-  expect(screen.getByText("Total: $ 123,45")).toBeTruthy();
+  expect(screen.queryByText("Total: $ 123,45")).toBeNull();
+  expect(screen.queryByLabelText("Notas y condiciones")).toBeNull();
+  await userEvent.press(
+    screen.getByRole("button", { name: "Vigencia y condiciones" }),
+  );
+  expect(conditionsEdited).toHaveBeenCalledOnce();
   await userEvent.press(screen.getByRole("button", { name: "Moneda USD" }));
   expect(changed).toHaveBeenCalledWith({ currency: Currency.USD });
   expect(form.currency).toBe(Currency.ARS);
-  await userEvent.press(screen.getByRole("button", { name: "Agregar ítem" }));
-  expect(itemAdded).toHaveBeenCalledOnce();
+  await userEvent.press(
+    screen.getByRole("button", { name: "Agregar material" }),
+  );
+  expect(typeAdded).toHaveBeenCalledWith(EstimateItemType.Material);
 });

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es-AR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Presupuesto P-014 · Muestra de diseño</title>
+<style>
+@font-face{font-family:Noto;src:url('assets/NotoSans.ttf') format('truetype');font-weight:100 900;font-display:swap}
+:root{--brand:#17645B;--soft:#E7F2EF;--text:#202938;--muted:#526071;--border:#D4DAE0}
+*{box-sizing:border-box}body{margin:0;background:#F7F8FA;color:var(--text);font-family:Noto,'Noto Sans',sans-serif;font-size:10pt;line-height:1.5}.page{max-width:210mm;min-height:297mm;margin:24px auto;background:#fff;padding:18mm 17mm;box-shadow:0 3px 24px #20293812}
+header{display:flex;justify-content:space-between;gap:24px;padding-bottom:9mm;border-bottom:2px solid var(--brand)}.brand{font-size:19pt;font-weight:700;letter-spacing:-.6px;color:var(--brand)}.eyebrow{font-size:9pt;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted)}h1{font-size:24pt;margin:0 0 3mm;font-weight:650;line-height:1.2}.right{text-align:right}.muted{color:var(--muted)}.meta{font-size:9pt}.meta strong{font-size:11pt;font-weight:600}h2{font-size:12pt;margin:0 0 3mm;font-weight:650}.customer{display:grid;grid-template-columns:1fr 1fr;gap:8mm;padding:8mm 0}.customer p{margin:0 0 1.5mm}.work{border-radius:8px;background:var(--soft);padding:5mm;margin-bottom:8mm}.work p{margin:0}.work h2{color:var(--brand)}
+table{border-collapse:collapse;width:100%;table-layout:fixed;margin-bottom:6mm}thead{display:table-header-group}th{font-size:8pt;letter-spacing:.3px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);padding:2.5mm 1.5mm;text-align:right}th:first-child{text-align:left;padding-left:0}td{padding:3mm 1.5mm;border-bottom:1px solid #E8EBEF;text-align:right;vertical-align:top;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}td:first-child{text-align:left;padding-left:0}th:last-child,td:last-child{padding-right:0}tbody tr{break-inside:avoid}.desc{font-weight:500}.unit{color:var(--muted);font-size:8.5pt}.subtotal{display:flex;justify-content:flex-end;gap:10mm;margin:-3mm 0 7mm;color:var(--muted);font-size:9pt;break-inside:avoid}.subtotal strong{color:var(--text);font-weight:600}
+.total{display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--brand);padding:5mm 0 2mm;margin:2mm 0 7mm;break-inside:avoid}.total .label{font-size:11pt;font-weight:600}.total .amount{font-size:24pt;letter-spacing:-.6px;font-weight:700;color:var(--brand);font-variant-numeric:tabular-nums}.conditions{break-inside:avoid}.conditions p{margin:0}.footer{margin-top:10mm;padding-top:4mm;border-top:1px solid var(--border);font-size:8pt;color:var(--muted)}.sample{margin-top:3mm;font-size:7.5pt;color:var(--muted)}
+@page{size:A4;margin:16mm 17mm} @media print{body{background:white}.page{margin:0;padding:0;max-width:none;min-height:0;box-shadow:none}header{padding-bottom:6mm}.customer{padding:6mm 0}.work{padding:4mm;margin-bottom:6mm;print-color-adjust:exact;-webkit-print-color-adjust:exact}table{margin-bottom:4mm}.subtotal{margin-bottom:4mm}.total{margin-bottom:5mm}.footer{margin-top:6mm}h2{break-after:avoid}}
+</style>
+<main class="page">
+<header>
+ <div><div class="brand">Galeano Servicios</div><div class="muted">Mantenimiento y pintura</div><div class="meta muted">Posadas, Misiones<br>376 4123456 · contacto@ejemplo.com</div></div>
+ <div class="right"><div class="eyebrow">Presupuesto</div><h1>P-014</h1><div class="meta">Emitido: <strong>16/10/2026</strong><br>Válido hasta: <strong>31/10/2026</strong></div></div>
+</header>
+<section class="customer"><div><h2>Preparado para</h2><p><strong>Ana Rodríguez</strong></p><p class="muted">376 4123456</p></div><div><h2>Lugar del trabajo</h2><p>Casa</p><p class="muted">Calle de ejemplo 125 · Posadas</p></div></section>
+<section class="work"><h2>Trabajo a realizar</h2><p>Pintura de paredes del living</p></section>
+<section><h2>Materiales</h2>
+<table aria-label="Materiales"><colgroup><col style="width:44%"><col style="width:18%"><col style="width:19%"><col style="width:19%"></colgroup><thead><tr><th>Descripción</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr></thead><tbody>
+<tr><td class="desc">Pintura látex interior</td><td>2 <span class="unit">latas</span></td><td>$ 18.000</td><td>$ 36.000</td></tr>
+<tr><td class="desc">Rodillo</td><td>1 <span class="unit">unidad</span></td><td>$ 8.000</td><td>$ 8.000</td></tr>
+</tbody></table><div class="subtotal"><span>Subtotal materiales</span><strong>$ 44.000</strong></div></section>
+<section><h2>Mano de obra</h2>
+<table aria-label="Mano de obra"><colgroup><col style="width:44%"><col style="width:18%"><col style="width:19%"><col style="width:19%"></colgroup><thead><tr><th>Trabajo</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr></thead><tbody>
+<tr><td class="desc">Pintura del living</td><td>1 <span class="unit">trabajo</span></td><td>$ 80.000</td><td>$ 80.000</td></tr>
+<tr><td class="desc">Preparación de paredes</td><td>2 <span class="unit">horas</span></td><td>$ 11.000</td><td>$ 22.000</td></tr>
+</tbody></table><div class="subtotal"><span>Subtotal mano de obra</span><strong>$ 102.000</strong></div></section>
+<div class="total"><div class="label">Total <span class="muted">· ARS</span></div><div class="amount">$ 146.000</div></div>
+<section class="conditions"><h2>Notas y condiciones</h2><p>Materiales incluidos. Trabajo sujeto a visita.</p></section>
+<footer class="footer">Importes expresados en pesos argentinos (ARS).<div class="sample">Muestra de diseño con datos ficticios. Documento de referencia para el próximo desarrollo de Nora.</div></footer>
+</main>
+</html>
