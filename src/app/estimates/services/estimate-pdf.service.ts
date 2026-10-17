@@ -4,14 +4,19 @@ import { BusinessProfileService } from "../../business/services/business-profile
 import type { BusinessLogo } from "../../business/models/business-profile.model";
 import { IdService } from "../../shared/services/id.service";
 import type { Estimate } from "../models/estimate.model";
-import type { PdfLogo } from "../utils/estimate-pdf-document";
+import {
+  buildEstimatePdf,
+  type PdfFonts,
+  type PdfLogo,
+} from "../utils/estimate-pdf-document";
 const CACHE_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 @Injectable({ providedIn: "root" })
 export class EstimatePdfService {
   private readonly profiles = inject(BusinessProfileService);
   private readonly ids = inject(IdService);
-  private fontBytes?: Promise<Uint8Array>;
+  private fonts?: Promise<PdfFonts>;
+  private prepared?: { key: string; uri: string; size: number };
   async share(estimate: Estimate): Promise<void> {
     const business = await this.profiles.get();
     if (!business?.displayName?.trim())
@@ -22,7 +27,20 @@ export class EstimatePdfService {
     if (!(await sharing.isAvailableAsync()))
       throw new Error("No se puede compartir archivos en este dispositivo.");
     const { File, Directory, Paths } = await import("expo-file-system");
-    const { buildEstimatePdf } = await import("../utils/estimate-pdf-document");
+    const key = JSON.stringify({ estimate, business });
+    const cached = this.prepared;
+    if (cached?.key === key) {
+      const file = new File(cached.uri);
+      if (
+        file.exists &&
+        file.size === cached.size &&
+        file.modificationTime !== null &&
+        file.modificationTime >= Date.now() - CACHE_LIFETIME_MS
+      ) {
+        await this.shareFile(file, estimate.number, sharing);
+        return;
+      }
+    }
     const [font, logo] = await Promise.all([
       this.readFont(),
       business.logo ? this.readLogo(business.logo) : undefined,
@@ -53,33 +71,48 @@ export class EstimatePdfService {
         throw new Error(
           "No pudimos guardar el PDF en este teléfono. Volvé a intentarlo.",
         );
+      this.prepared = { key, uri: target.uri, size: bytes.length };
     } catch (error) {
       this.removeFile(target);
       throw error;
     }
+    await this.shareFile(target, estimate.number, sharing);
+  }
+  private async shareFile(
+    file: File,
+    number: string,
+    sharing: typeof import("expo-sharing"),
+  ): Promise<void> {
     // La aplicación receptora puede leer el archivo después de cerrar el selector.
-    await sharing.shareAsync(target.uri, {
+    await sharing.shareAsync(file.uri, {
       mimeType: "application/pdf",
       UTI: "com.adobe.pdf",
-      dialogTitle: `Compartir presupuesto ${estimate.number}`,
+      dialogTitle: `Compartir presupuesto ${number}`,
     });
   }
-  private readFont(): Promise<Uint8Array> {
-    return (this.fontBytes ??= this.loadFont().catch((error) => {
-      this.fontBytes = undefined;
+  private readFont(): Promise<PdfFonts> {
+    return (this.fonts ??= this.loadFonts().catch((error) => {
+      this.fonts = undefined;
       throw error;
     }));
   }
-  private async loadFont(): Promise<Uint8Array> {
+  private async loadFonts(): Promise<PdfFonts> {
     const { Asset } = await import("expo-asset");
     const { File } = await import("expo-file-system");
-    const asset = Asset.fromModule(require("../../../../assets/NotoSans.ttf"));
-    await asset.downloadAsync();
-    if (!asset.localUri)
-      throw new Error(
-        "No pudimos cargar la fuente del PDF. Volvé a intentarlo.",
-      );
-    return new File(asset.localUri).bytes();
+    const load = async (module: number): Promise<Uint8Array> => {
+      const asset = Asset.fromModule(module);
+      await asset.downloadAsync();
+      if (!asset.localUri)
+        throw new Error(
+          "No pudimos cargar la fuente del PDF. Volvé a intentarlo.",
+        );
+      return new File(asset.localUri).bytes();
+    };
+    const [regular, bold] = await Promise.all([
+      load(require("../../../../assets/NotoSans.ttf")),
+      load(require("../../../../assets/NotoSans-Bold.ttf")),
+    ]);
+    return { regular, bold };
   }
   private async readLogo(logo: BusinessLogo): Promise<PdfLogo> {
     const { File, Directory, Paths } = await import("expo-file-system");

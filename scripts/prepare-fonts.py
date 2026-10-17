@@ -9,5 +9,7 @@ for weight, name in [(400, "NotoSans"), (500, "NotoSans-Medium"), (600, "NotoSan
     axes = {axis.axisTag: axis.defaultValue for axis in font["fvar"].axes}
     axes["wght"] = weight
     instance = instantiateVariableFont(font, axes, inplace=True)
+    # fontkit usa loca corto al reducir el PDF: cada contorno debe empezar en un offset par.
+    instance["glyf"].padding = 4
     instance.save(root / "assets" / (name + ".ttf"))
     print(name)

@@ -30,6 +30,7 @@ vi.mock("expo-asset", () => ({
   },
 }));
 vi.mock("../../../../assets/NotoSans.ttf", () => ({ default: 1 }));
+vi.mock("../../../../assets/NotoSans-Bold.ttf", () => ({ default: 2 }));
 vi.mock("expo-file-system", () => {
   const uri = (base: string | { uri: string }, name?: string) =>
     (typeof base === "string" ? base : base.uri).replace(/\/$/, "") +
@@ -127,7 +128,7 @@ test("escribe bytes PDF verificados antes de compartir y conserva el documento",
   expect(native.build).toHaveBeenCalledWith(
     estimateFixture,
     profile,
-    expect.any(Uint8Array),
+    { regular: expect.any(Uint8Array), bold: expect.any(Uint8Array) },
     undefined,
   );
   expect(native.files.get(target)?.bytes).toEqual(bytes);
@@ -162,7 +163,8 @@ test("conserva la copia si falla compartir y permite reintentar", async () => {
   await expect(service.share(estimateFixture)).rejects.toThrow("Selector");
   expect(native.files.has(target)).toBe(true);
   await expect(service.share(estimateFixture)).resolves.toBeUndefined();
-  expect(native.download).toHaveBeenCalledOnce();
+  expect(native.download).toHaveBeenCalledTimes(2);
+  expect(native.build).toHaveBeenCalledOnce();
 });
 test("incluye el logo privado sin leer archivos ajenos", async () => {
   const uri = "file:///documents/business-logos/logo.png";
@@ -203,3 +205,40 @@ test("un número visible no puede salir del directorio de PDFs", async () => {
     "file:///cache/estimate-pdfs/Presupuesto-Juan-123.pdf",
   );
 });
+
+test("reutiliza el archivo intacto y lo regenera al cambiar un importe o el perfil", async () => {
+  const value = { ...profile };
+  const service = setup(value);
+  await service.share(estimateFixture);
+  await service.share(structuredClone(estimateFixture));
+  expect(native.build).toHaveBeenCalledOnce();
+  const edited = {
+    ...estimateFixture,
+    items: [{ ...estimateFixture.items[0], unitPriceCents: 999999 }],
+  };
+  await service.share(edited);
+  expect(native.build).toHaveBeenCalledTimes(2);
+  value.displayName = "Nombre actualizado";
+  await service.share(edited);
+  expect(native.build).toHaveBeenCalledTimes(3);
+  expect(native.share).toHaveBeenCalledTimes(4);
+});
+
+test.each(["ausente", "incompleto", "vencido"])(
+  "regenera un PDF en caché %s antes de compartir",
+  async (state) => {
+    const service = setup();
+    await service.share(estimateFixture);
+    if (state === "ausente") native.files.delete(target);
+    else if (state === "incompleto")
+      native.files.set(target, {
+        bytes: bytes.slice(0, 2),
+        modified: Date.now(),
+      });
+    else
+      native.files.set(target, { bytes, modified: Date.now() - 2 * 86400000 });
+    await service.share(estimateFixture);
+    expect(native.build).toHaveBeenCalledTimes(2);
+    expect(native.files.get(target)?.bytes).toEqual(bytes);
+  },
+);
