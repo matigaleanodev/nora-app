@@ -62,7 +62,7 @@ Actualizado: 2026-10-16. Reglas de diseño objetivo para implementar en otro hil
 - Al confirmar «Agregar» o «Guardar cambios» de un material o tarea, incorporar el cambio al borrador e iniciar su autoguardado local. Sólo informar que está guardado después de confirmar la escritura; cancelar conserva el renglón anterior.
 - Cancelar la edición de un renglón no modifica su valor anterior. Eliminar debe ser una acción explícita, no depender de descubrir un gesto.
 - Mantener «Agregar material» y «Agregar mano de obra» accesibles para carga repetida. El total y «Revisar presupuesto» tienen un lugar estable sin tapar los últimos renglones ni el teclado. Revisar sale del editor hacia la revisión, valida lo necesario y no envía ni cambia el estado. No exigir «Guardar borrador» manual como mecanismo normal de persistencia.
-- Separar datos principales (cliente, descripción, moneda) de «Vigencia y condiciones», un desplegable secundario que conserva acceso y valores cargados; indicar en su resumen cuándo contiene datos. Número visible sigue editable y obligatorio al validar el documento; no introducir numeración automática en este corte.
+- Separar datos principales (cliente, descripción, moneda) de «Vigencia y condiciones»: fila de navegación antes de los materiales, con resumen de vencimiento y notas. Abre una pantalla dedicada; no expande campos debajo del botón. Volver conserva la edición autoguardada, restaura el contexto y bloquea la salida silenciosa ante fallos de escritura. Número visible sigue editable y obligatorio al validar el documento; no introducir numeración automática en este corte.
 - No introducir catálogo, carga masiva, asistente por pasos ni nuevas reglas de negocio sin acordar su necesidad.
 
 ## Autoguardado de presupuestos
@@ -147,6 +147,8 @@ Usar movimiento breve, sobrio y funcional para explicar cambios de contexto o es
 - Validar con el primer trabajador real que «Mi negocio» y las acciones de materiales/mano de obra se entienden sin explicación.
 
 ## Registro
+
+- 2026-10-17: tras la prueba real se reemplaza la expansión de vigencia por pantalla dedicada y resumen visible. Filas compactas de dos niveles con importe alineado, navegación secundaria sin botones con borde, total único y compartir fijo en el pie del detalle. PDF con cabecera en columnas y tabla compacta; presupuestos chicos caben en A4 sin reducir legibilidad. Los largos paginan y repiten cabeceras; no se promete una sola página para contenido ilimitado.
 
 - 2026-10-16: consolidadas las reglas por delegación de UX: Inicio/Mi negocio, recuperación separada de editores, revisión explícita y despliegue secundario de vigencia/condiciones. Futuros cambios de alcance se mantienen pendientes en el traspaso.
 

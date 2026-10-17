@@ -2,11 +2,11 @@
 
 [Español](README.es.md) · [Identity](../visual-identity.md) · [Design and UX](../ux-guidelines.md) · [Implementation handoff](../implementation-handoff.md)
 
-Updated: 2026-10-16. Reference for the P1 + T2 + F1 target design with fictional data. It does not describe already implemented screens or change application code.
+Updated: 2026-10-17. Reference for the P1 + T2 + F1 target design with fictional data. It does not describe already implemented screens or change application code.
 
 ## View in Figma
 
-Completed file: [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Verified on 2026-10-16: 35 base views and two repeated-entry variants, 464 editable texts, 159 instances, and 133 connected controls without invalid destinations. Includes 39 variables, five text styles, and 15 main components with 12 button variants. The A4 document contains 41 editable texts.
+Completed file: [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Verified on 2026-10-17: 35 base views and two repeated-entry variants, 460 editable texts, 158 instances, and 132 connected controls without invalid destinations. Includes 39 variables, five text styles, and 15 main components with 12 button variants. The A4 document contains 41 editable texts.
 
 Three-page structure adapted to the current Figma plan's limit:
 
@@ -26,7 +26,7 @@ To explore the prototype, select that frame and open **Present ▶**, or [open t
 
 - [index.html](index.html): local viewer for comparing screens and following the reference flow without a backend. Open it in a browser from the file explorer; the design remains available without Figma access.
 - [tokens.json](tokens.json): palette, typography, geometry, and motion timing. Native geometry values are dp and scalable base type values are sp; the HTML preview approximates them rather than certifying native measurements.
-- [figma-payload.json](figma-payload.json): structure for 35 target screens: 24 in the primary flow, 7 states, and 4 future concepts. Includes 110 specified routes; this is not a claim of verified remote connections. `category: current` identifies the current target flow, not features already implemented today.
+- [figma-payload.json](figma-payload.json): structure for 35 target screens: 24 in the primary flow, 7 states, and 4 future concepts. Includes 109 specified routes; this is not a claim of verified remote connections. `category: current` identifies the current target flow, not features already implemented today.
 - [nora-presupuesto-ejemplo.pdf](nora-presupuesto-ejemplo.pdf) and [its HTML template](nora-presupuesto-ejemplo.html): reference for the estimate delivered to a client. Prioritize the worker's identity, materials/labor, amounts, total, and conditions; Nora stays secondary if included.
 - `figma-import/`: final remote-node IDs and verification record. The provisional importer was removed; there is no plugin to install or code to import into Nora's runtime.
 

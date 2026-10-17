@@ -2,11 +2,11 @@
 
 [English](README.md) · [Identidad](../visual-identity.es.md) · [Diseño y UX](../ux-guidelines.es.md) · [Traspaso a desarrollo](../implementation-handoff.es.md)
 
-Actualizado: 2026-10-16. Referencia del diseño objetivo P1 + T2 + F1, con datos ficticios. No describe pantallas ya implementadas ni cambia el código de la app.
+Actualizado: 2026-10-17. Referencia del diseño objetivo P1 + T2 + F1, con datos ficticios. No describe pantallas ya implementadas ni cambia el código de la app.
 
 ## Ver en Figma
 
-Archivo terminado: [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Verificado el 2026-10-16: 35 vistas base y dos variantes de carga repetida, 464 textos editables, 159 instancias y 133 controles conectados, sin destinos inválidos. Incluye 39 variables, cinco estilos tipográficos y 15 componentes principales con 12 variantes de botón. El documento A4 tiene 41 textos editables.
+Archivo terminado: [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Verificado el 2026-10-17: 35 vistas base y dos variantes de carga repetida, 460 textos editables, 158 instancias y 132 controles conectados, sin destinos inválidos. Incluye 39 variables, cinco estilos tipográficos y 15 componentes principales con 12 variantes de botón. El documento A4 tiene 41 textos editables.
 
 Estructura de tres páginas, adaptada al límite del plan actual de Figma:
 
@@ -26,7 +26,7 @@ Para recorrer el prototipo, seleccioná ese frame y abrí **Presentar ▶**, o [
 
 - [index.html](index.html): visor local para comparar pantallas y recorrer el circuito de referencia, sin backend. Se puede abrir desde el explorador de archivos en un navegador; el diseño se conserva aunque no haya acceso a Figma.
 - [tokens.json](tokens.json): paleta, tipografía, geometría y ritmo de movimiento. Valores nativos de geometría en dp y tipografía base escalable en sp; la previsualización HTML los aproxima, no certifica mediciones nativas.
-- [figma-payload.json](figma-payload.json): estructura de 35 pantallas objetivo: 24 del circuito principal, 7 estados y 4 conceptos futuros. Incluye 110 rutas especificadas; no son una afirmación de conexiones remotas ya verificadas. `category: current` identifica el circuito objetivo actual, no funcionalidad implementada hoy.
+- [figma-payload.json](figma-payload.json): estructura de 35 pantallas objetivo: 24 del circuito principal, 7 estados y 4 conceptos futuros. Incluye 109 rutas especificadas; no son una afirmación de conexiones remotas ya verificadas. `category: current` identifica el circuito objetivo actual, no funcionalidad implementada hoy.
 - [nora-presupuesto-ejemplo.pdf](nora-presupuesto-ejemplo.pdf) y [su plantilla HTML](nora-presupuesto-ejemplo.html): referencia del presupuesto para entregar al cliente. Priorizar identidad del trabajador, materiales/mano de obra, importes, total y condiciones; Nora permanece secundaria si se incluye.
 - `figma-import/`: registro final de IDs y verificación del archivo remoto. Se retiró el importador provisional; no hay un plugin que instalar ni código para importar al runtime de Nora.
 

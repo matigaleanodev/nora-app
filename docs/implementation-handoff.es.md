@@ -2,7 +2,9 @@
 
 [English](implementation-handoff.md) · [Identidad](visual-identity.es.md) · [Diseño y UX](ux-guidelines.es.md) · [Kit visual](design-kit/README.es.md)
 
-Actualizado: 2026-10-16. Este hilo define diseño y documentación; no implementa cambios en la app ni autoriza commits. La base permite comenzar desarrollo incremental en otro hilo. Los pendientes futuros no bloquean ese comienzo.
+Guía inicial de diseño del 2026-10-16, actualizada con la revisión del 2026-10-17. El usuario autorizó corregir la primera implementación; el estado actual está en [Implementación y prueba manual](implementation-status.es.md). No se autorizan commits ni publicación automática. Los pendientes futuros no bloquean el desarrollo incremental.
+
+Revisión 2026-10-17: el usuario pidió corregir la primera implementación. Estado actual y validación en [Implementación y prueba manual](implementation-status.es.md). Vigencia y condiciones ahora tiene pantalla dedicada; esta decisión reemplaza el desplegable inicial.
 
 ## Referencias y acceso
 
@@ -11,11 +13,11 @@ Actualizado: 2026-10-16. Este hilo define diseño y documentación; no implement
 - [Símbolo elegido](brand-explorations/nora-icon/03-monogram-v2.png), [variantes vectoriales y splash](brand-explorations/nora-icon/vector-preview/README.es.md) y [presentación de marca](brand-presentation/nora-identidad-visual.pptx).
 - Las guías escritas son la referencia de comportamiento; una muestra estática no sustituye sus reglas de recuperación, accesibilidad o persistencia.
 
-**Figma terminado y verificado:** [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Contiene 35 vistas base, dos variantes de carga repetida y el PDF A4 editable; 133 controles conectados sin destinos inválidos. Se revisaron visualmente el circuito principal, menú, estados, componentes y documento. La [guía del kit](design-kit/README.es.md) explica las páginas y cómo recorrerlo. El HTML/JSON local y el archivo remoto son entregables diferentes; la validación nativa corresponde al hilo de implementación.
+**Figma terminado y verificado:** [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Contiene 35 vistas base, dos variantes de carga repetida y el PDF A4 editable; 132 controles conectados sin destinos inválidos. Se revisaron visualmente el circuito principal, menú, estados, componentes y documento. La [guía del kit](design-kit/README.es.md) explica las páginas y cómo recorrerlo. El HTML/JSON local y el archivo remoto son entregables diferentes; la validación nativa corresponde al hilo de implementación.
 
 ## Base al entregar el diseño y objetivo
 
-| Área         | Implementado hoy                                              | Diseño objetivo                                                                                             |
+| Área         | Base anterior al rediseño                                     | Diseño objetivo                                                                                             |
 | ------------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Identidad    | Terracota/oliva, marca tipográfica «nora»                     | P1 petróleo `#17645B`, Noto Sans, F1 precisa, firma «Nora» y monograma n                                    |
 | Navegación   | Clientes · Inicio · Presupuestos; header global con engranaje | Mismos tres destinos; menú superior derecho y drawer desde derecha; encabezado compacto y volver contextual |

@@ -62,7 +62,7 @@ Updated: 2026-10-16. Target-design rules for implementation in a separate chat. 
 - Confirming “Agregar” or “Guardar cambios” for a material or task applies the change to the draft and starts local autosave. Report it as saved only after the write is confirmed; cancel preserves the original line.
 - Canceling an edit preserves the original line. Deletion must be an explicit action, not depend on discovering a gesture.
 - Keep both add actions accessible for repeated entry. Give the total and “Revisar presupuesto” a stable location without covering the last lines or the keyboard. Review leaves the editor for review, validates requirements, and does not send or change status. Do not require manual “Guardar borrador” as the normal persistence mechanism.
-- Separate core data (client, description, currency) from “Vigencia y condiciones”, a secondary disclosure preserving access and entered values; its summary indicates when data is present. The visible number remains editable and required when validating the document; do not introduce automatic numbering in this increment.
+- Separate core data (client, description, currency) from “Vigencia y condiciones”: a navigation row before materials, summarizing expiry and notes. It opens a dedicated screen rather than expanding fields below the trigger. Back preserves autosaved edits, restores context, and prevents silent exit after a failed write. The visible number remains editable and required when validating the document; do not introduce automatic numbering in this increment.
 - Do not introduce a catalog, bulk entry, a step wizard, or new business rules without agreeing on their need.
 
 ## Estimate autosave
@@ -147,6 +147,8 @@ Use brief, restrained, functional motion to explain context or state changes. To
 - Validate with the first real worker that “Mi negocio” and material/labor actions are understandable without explanation.
 
 ## Log
+
+- 2026-10-17: device feedback replaces the validity disclosure with a dedicated screen and visible summary before materials. Compact two-level rows, aligned amounts, navigation rows, a single form total, and fixed detail PDF sharing. Small documents use compact A4 tables; long content paginates with repeated headers rather than shrinking everything onto one page.
 
 - 2026-10-16: consolidated delegated UX rules: Inicio/Mi negocio, separate editor recovery, explicit review, and secondary validity/conditions disclosure. Future scope changes remain open in the handoff.
 

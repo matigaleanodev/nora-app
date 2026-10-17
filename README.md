@@ -8,7 +8,7 @@ Android assistant for technicians: customers, estimates with materials/labor, an
 
 ## Current state
 
-Android app with example home tasks and working local customer/estimate CRUD screens. Bottom tabs: Customers · Home · Estimates. Both domains have searchable lists, a circular add button, full details and separate create/edit forms. Customers archive/restore; only draft estimates can be edited/deleted. Confirmations protect destructive actions and unsaved changes. UUID entities and SQLite persistence remain offline, with no account/backend/ads. Light terracotta/olive palette and semantic theme tokens. The user tested the initial preview in Expo Go; the new CRUD, native keyboard/back behavior and persistence after restarting Android still need device validation.
+Android app with a real business dashboard, local customer/estimate CRUD, and offline PDF sharing. Bottom tabs: Customers · Home · Estimates; additional options open in the right drawer. Estimates use compact materials/labor lists, dedicated editors, local autosave/recovery, and a separate validity/conditions screen. Customers archive/restore; only draft estimates can be edited/deleted. UUID entities and SQLite persistence remain offline, with no account/backend/ads. The approved visual identity uses deep teal, Noto Sans, and the Nora monogram. The user accepted the revised appearance; remaining device checks are tracked in [implementation status](docs/implementation-status.md).
 
 Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6, Vitest 5. Resolved versions: package-lock.json. Native views through Fabric, not Ionic/WebView. Tailwind CSS 4 is configured through @ng-native/tailwind 0.13.0, Metro and src/styles.css. Global native styles are registered in src/main.ts.
 
@@ -56,7 +56,7 @@ Validation: typecheck and nine tests pass (native UI tests plus domain/persisten
 
 ## Unit tests
 
-Run `npm test` from Ubuntu/WSL. The suite currently has 186 passing cases across twenty-seven files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite, Expo Crypto, Print, Sharing and FileSystem are mocked; this suite does not prove their native device execution. `npm run typecheck` also passes.
+Run `npm test` from Ubuntu/WSL. The suite currently has 195 passing cases across twenty-nine files, including UI interactions and unit tests for domain/shared services and page flows: local storage, UUID generation, customers, estimates, tasks and notifications. Test descriptions are in Spanish. Tests cover persistence failures, serialized updates, validation, state transitions, snapshots, calculations and toast timers. SQLite, Expo Crypto, Print, Sharing and FileSystem are mocked; this suite does not prove their native device execution. `npm run typecheck` also passes.
 
 ## Formatting
 

@@ -2,7 +2,9 @@
 
 [Español](implementation-handoff.es.md) · [Identity](visual-identity.md) · [Design and UX](ux-guidelines.md) · [Design kit](design-kit/README.md)
 
-Updated: 2026-10-16. This chat defines design and documentation; it does not implement app changes or authorize commits. The foundation supports incremental development in another chat. Future open items do not block that start.
+Initial design guide dated 2026-10-16, updated for the 2026-10-17 revision. The user authorized correcting the first implementation; current status is in [Implementation and manual checks](implementation-status.md). No automatic commits or publishing are authorized. Future open items do not block incremental development.
+
+Revision 2026-10-17: the user requested corrections to the first implementation. Current state and checks are in [Implementation and manual validation](implementation-status.md). Validity and conditions now has a dedicated screen, superseding the initial disclosure.
 
 ## References and access
 
@@ -11,11 +13,11 @@ Updated: 2026-10-16. This chat defines design and documentation; it does not imp
 - [Selected symbol](brand-explorations/nora-icon/03-monogram-v2.png), [vector variants and splash](brand-explorations/nora-icon/vector-preview/README.md), and [brand presentation](brand-presentation/nora-identidad-visual.pptx).
 - Written guides are authoritative for behavior; a static sample does not replace recovery, accessibility, or persistence rules.
 
-**Figma completed and verified:** [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Contains 35 base views, two repeated-entry variants, and the editable A4 PDF; 133 connected controls have no invalid destinations. The main flow, drawer, states, components, and document were visually reviewed. The [kit guide](design-kit/README.md) explains its pages and navigation. Local HTML/JSON and the remote file are different deliverables; native validation belongs to the implementation chat.
+**Figma completed and verified:** [Nora — Diseño y UX](https://www.figma.com/design/aCVZWB5QOP3spoGNdXhxvx). Contains 35 base views, two repeated-entry variants, and the editable A4 PDF; 132 connected controls have no invalid destinations. The main flow, drawer, states, components, and document were visually reviewed. The [kit guide](design-kit/README.md) explains its pages and navigation. Local HTML/JSON and the remote file are different deliverables; native validation belongs to the implementation chat.
 
 ## Baseline at design handoff and target
 
-| Area        | Implemented today                                        | Target design                                                                                    |
+| Area        | Baseline before redesign                                 | Target design                                                                                    |
 | ----------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Identity    | Terracotta/olive, lowercase “nora” wordmark              | P1 teal `#17645B`, Noto Sans, precise F1, “Nora” wordmark and n monogram                         |
 | Navigation  | Clientes · Inicio · Presupuestos; global header and gear | Same three destinations; top-right trigger and right drawer; compact header and contextual back  |

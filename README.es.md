@@ -8,7 +8,7 @@ Asistente Android para técnicos: clientes, presupuestos con materiales/mano de 
 
 ## Estado actual
 
-App Android con tareas de ejemplo en Inicio y pantallas CRUD locales de clientes/presupuestos. Tabs inferiores: Clientes · Inicio · Presupuestos. Ambos dominios tienen listas con búsqueda, botón circular para agregar, detalle completo y formularios de creación/edición. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Confirmaciones protegen acciones destructivas y cambios sin guardar. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. Tema claro terracota/oliva con tokens semánticos. El usuario probó la vista inicial en Expo Go; los nuevos CRUD, teclado/Atrás nativos y persistencia tras reiniciar Android todavía requieren validación en teléfono.
+App Android con resumen real del negocio, CRUD local de clientes/presupuestos y PDF para compartir offline. Tabs inferiores: Clientes · Inicio · Presupuestos; las opciones adicionales están en el menú lateral derecho. Los presupuestos usan listas compactas de materiales/mano de obra, editores dedicados, autoguardado/recuperación local y pantalla separada de vigencia/condiciones. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. La identidad aprobada usa verde petróleo, Noto Sans y el monograma de Nora. El usuario aceptó el aspecto revisado; las comprobaciones pendientes en teléfono figuran en [estado de implementación](docs/implementation-status.es.md).
 
 Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6 y Vitest 5. Versiones resueltas en package-lock.json. Vistas nativas mediante Fabric, no Ionic/WebView. Tailwind CSS 4 integrado con @ng-native/tailwind 0.13.0, Metro y src/styles.css; estilos globales nativos registrados en src/main.ts.
 
@@ -56,7 +56,7 @@ Validación: typecheck y suite actual correctos (interacciones nativas y dominio
 
 ## Pruebas unitarias
 
-Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 186 casos correctos en veintisiete archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite, Expo Crypto, Print, Sharing y FileSystem están simulados: esta suite no demuestra su ejecución nativa en el teléfono. `npm run typecheck` también correcto.
+Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 195 casos correctos en veintinueve archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite, Expo Crypto, Print, Sharing y FileSystem están simulados: esta suite no demuestra su ejecución nativa en el teléfono. `npm run typecheck` también correcto.
 
 ## Formato
 

@@ -25,7 +25,7 @@
     "3:97"
   ],
   "fileKey": "aCVZWB5QOP3spoGNdXhxvx",
-  "date": "2026-10-16",
+  "date": "2026-10-17",
   "status": "verified",
   "pages": [
     {
@@ -100,7 +100,7 @@
     {
       "nodeId": "8:575",
       "sourceId": "estimate-options",
-      "name": "estimate-options · Datos del presupuesto"
+      "name": "estimate-options · Vigencia y condiciones"
     },
     {
       "nodeId": "8:610",
@@ -232,9 +232,9 @@
     "baseScreens": 35,
     "repeatedEntryVariants": 2,
     "totalFrames": 37,
-    "editableTexts": 464,
-    "componentInstances": 159,
-    "linkedControls": 133,
+    "editableTexts": 460,
+    "componentInstances": 158,
+    "linkedControls": 132,
     "variables": 39,
     "textStyles": 5,
     "mainComponents": 15,
@@ -305,5 +305,12 @@
     "Agenda futura",
     "Componentes",
     "PDF A4"
-  ]
+  ],
+  "revision": "Vigencia y condiciones: pantalla dedicada; resumen antes de materiales. Número editable y moneda en formulario principal.",
+  "retiredNodeIds": [
+    "8:500",
+    "8:584",
+    "8:596"
+  ],
+  "replacementNumberFieldId": "30:512"
 }

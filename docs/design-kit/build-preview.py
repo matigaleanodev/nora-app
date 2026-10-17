@@ -29,5 +29,5 @@ def embed(value):
 template = (ROOT / "preview-template.html").read_text(encoding="utf-8")
 for marker, value in {"__FONT_CSS__": font_css, "__PAYLOAD__": embed(payload), "__TOKENS__": embed(tokens), "__SYMBOL__": embed(symbol), "__SPLASH__": embed(splash)}.items():
     template = template.replace(marker, value)
-(ROOT / "index.html").write_text(template, encoding="utf-8")
+(ROOT / "index.html").write_text(template, encoding="utf-8", newline="\n")
 print(f"Offline viewer built with {len(payload['screens'])} screens and Noto Sans: {ROOT / 'index.html'}")

@@ -562,10 +562,9 @@
           "variant": "success"
         },
         {
-          "type": "row",
-          "label": "P-014",
-          "value": "Moneda: ARS",
-          "route": "estimate-options"
+          "type": "field",
+          "label": "Número de presupuesto *",
+          "value": "P-014"
         },
         {
           "type": "row",
@@ -577,6 +576,21 @@
           "type": "field",
           "label": "Descripción del trabajo *",
           "value": "Pintura de paredes del living"
+        },
+        {
+          "type": "segmented",
+          "label": "Moneda",
+          "value": "ARS",
+          "options": [
+            "ARS",
+            "USD"
+          ]
+        },
+        {
+          "type": "row",
+          "label": "Vigencia y condiciones",
+          "value": "31/10/2026 · Con notas",
+          "route": "estimate-options"
         },
         {
           "type": "section",
@@ -627,12 +641,6 @@
           "label": "Agregar mano de obra",
           "route": "labor-new",
           "variant": "secondary"
-        },
-        {
-          "type": "row",
-          "label": "Validez, notas y condiciones",
-          "value": "Opcional",
-          "route": "estimate-options"
         }
       ],
       "footer": [
@@ -648,30 +656,11 @@
     },
     {
       "id": "estimate-options",
-      "title": "Datos del presupuesto",
+      "title": "Vigencia y condiciones",
       "category": "current",
       "tab": null,
       "secondary": true,
       "blocks": [
-        {
-          "type": "field",
-          "label": "Número *",
-          "value": "P-014"
-        },
-        {
-          "type": "segmented",
-          "label": "Moneda",
-          "value": "ARS",
-          "options": [
-            "ARS",
-            "USD"
-          ]
-        },
-        {
-          "type": "paragraph",
-          "label": "Moneda",
-          "value": "Cambiarla no convierte los importes. Si ya hay precios, confirmar antes."
-        },
         {
           "type": "field",
           "label": "Válido hasta",
@@ -691,7 +680,7 @@
         }
       ],
       "back": "estimate-form",
-      "note": "En producción, Vigencia y condiciones se despliega dentro del presupuesto; este frame representa el estado expandido. El número permanece editable y no se genera automáticamente."
+      "note": "Pantalla dedicada desde la fila de resumen anterior a los materiales. Volver conserva lo autoguardado; no se expanden campos en el presupuesto."
     },
     {
       "id": "choose-client",
@@ -1811,13 +1800,13 @@
     },
     {
       "from": "estimate-form",
-      "action": "P-014",
-      "to": "estimate-options"
+      "action": "Ana Rodríguez",
+      "to": "choose-client"
     },
     {
       "from": "estimate-form",
-      "action": "Ana Rodríguez",
-      "to": "choose-client"
+      "action": "Vigencia y condiciones",
+      "to": "estimate-options"
     },
     {
       "from": "estimate-form",
@@ -1848,11 +1837,6 @@
       "from": "estimate-form",
       "action": "Agregar mano de obra",
       "to": "labor-new"
-    },
-    {
-      "from": "estimate-form",
-      "action": "Validez, notas y condiciones",
-      "to": "estimate-options"
     },
     {
       "from": "estimate-form",
