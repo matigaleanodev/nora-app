@@ -1,6 +1,6 @@
 # Nora — Design kit and Figma
 
-[Español](README.es.md) · [Identity](../visual-identity.md) · [Design and UX](../ux-guidelines.md) · [Implementation handoff](../implementation-handoff.md)
+[Español](README.es.md) · [Identity](../visual-identity.md) · [Design and UX](../ux-guidelines.md)
 
 Updated: 2026-10-17. Reference for the P1 + T2 + F1 target design with fictional data. It does not describe already implemented screens or change application code.
 

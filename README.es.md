@@ -1,6 +1,6 @@
 # Nora App
 
-[Identidad visual](docs/visual-identity.es.md) · [Diseño y UX](docs/ux-guidelines.es.md) · [Kit visual](docs/design-kit/README.es.md) · [Traspaso a desarrollo](docs/implementation-handoff.es.md).
+[Identidad visual](docs/visual-identity.es.md) · [Diseño y UX](docs/ux-guidelines.es.md) · [Kit visual](docs/design-kit/README.es.md).
 
 **N.O.R.A. — Notas, Organización, Registros y Administración.**
 
@@ -8,7 +8,7 @@ Asistente Android para técnicos: clientes, presupuestos con materiales/mano de 
 
 ## Estado actual
 
-App Android con resumen real del negocio, CRUD local de clientes/presupuestos y PDF para compartir offline. Tabs inferiores: Clientes · Inicio · Presupuestos; las opciones adicionales están en el menú lateral derecho. Los presupuestos usan listas compactas de materiales/mano de obra, editores dedicados, autoguardado/recuperación local y pantalla separada de vigencia/condiciones. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. La identidad aprobada usa verde petróleo, Noto Sans y el monograma de Nora. El usuario aceptó el aspecto revisado; las comprobaciones pendientes en teléfono figuran en [estado de implementación](docs/implementation-status.es.md).
+App Android con resumen real del negocio, CRUD local de clientes/presupuestos y PDF para compartir offline. Tabs inferiores: Clientes · Inicio · Presupuestos; las opciones adicionales están en el menú lateral derecho. Los presupuestos usan listas compactas de materiales/mano de obra, editores dedicados, autoguardado/recuperación local y pantalla separada de vigencia/condiciones. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. La identidad aprobada usa verde petróleo, Noto Sans y el monograma de Nora.
 
 Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6 y Vitest 5. Versiones resueltas en package-lock.json. Vistas nativas mediante Fabric, no Ionic/WebView. Tailwind CSS 4 integrado con @ng-native/tailwind 0.13.0, Metro y src/styles.css; estilos globales nativos registrados en src/main.ts.
 
@@ -108,8 +108,6 @@ Desde el detalle de un presupuesto guardado, **Compartir PDF** genera un documen
 
 Compartir no elige el contacto de WhatsApp, no confirma entrega ni cambia el estado. Elegir app/contacto y marcar como enviado son acciones separadas. Un error conserva el detalle y permite reintentar; mientras está ocupado se bloquean solicitudes repetidas.
 
-La validación de esta rama figura en [estado de implementación y prueba manual](docs/implementation-status.es.md). Se revisaron visualmente PDFs del generador real, incluidos 50 renglones y notas extensas. Falta la ejecución en Android, logos y compartir antes de publicar.
-
 ## Identidad visual y recuperación de borradores
 
-P1 petróleo + T2 Noto Sans offline + F1 precisa. Inicio/Mi negocio usa datos reales; menú desde la derecha y pestañas sólo en las tres pantallas principales. Los materiales y tareas se editan por separado, con carga repetida y cancelación aislada. `estimate-recovery.v1` conserva texto incompleto y editores interrumpidos con UUID estable y escrituras serializadas; revisar valida antes de crear/actualizar `estimates.v1`, sin debilitar sus contratos. Ver [implementación y prueba manual](docs/implementation-status.es.md).
+P1 petróleo + T2 Noto Sans offline + F1 precisa. Inicio/Mi negocio usa datos reales; menú desde la derecha y pestañas sólo en las tres pantallas principales. Los materiales y tareas se editan por separado, con carga repetida y cancelación aislada. `estimate-recovery.v1` conserva texto incompleto y editores interrumpidos con UUID estable y escrituras serializadas; revisar valida antes de crear/actualizar `estimates.v1`, sin debilitar sus contratos.

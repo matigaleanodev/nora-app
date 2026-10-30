@@ -1,6 +1,6 @@
 # Nora — Kit visual y Figma
 
-[English](README.md) · [Identidad](../visual-identity.es.md) · [Diseño y UX](../ux-guidelines.es.md) · [Traspaso a desarrollo](../implementation-handoff.es.md)
+[English](README.md) · [Identidad](../visual-identity.es.md) · [Diseño y UX](../ux-guidelines.es.md)
 
 Actualizado: 2026-10-17. Referencia del diseño objetivo P1 + T2 + F1, con datos ficticios. No describe pantallas ya implementadas ni cambia el código de la app.
 
