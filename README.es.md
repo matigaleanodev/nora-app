@@ -108,7 +108,6 @@ Desde el detalle de un presupuesto guardado, **Compartir PDF** genera un documen
 
 Compartir no elige el contacto de WhatsApp, no confirma entrega ni cambia el estado. Elegir app/contacto y marcar como enviado son acciones separadas. Un error conserva el detalle y permite reintentar; mientras está ocupado se bloquean solicitudes repetidas.
 
-
 ## Identidad visual y recuperación de borradores
 
 P1 petróleo + T2 Noto Sans offline + F1 precisa. Inicio/Mi negocio usa datos reales; menú desde la derecha y pestañas sólo en las tres pantallas principales. Los materiales y tareas se editan por separado, con carga repetida y cancelación aislada. `estimate-recovery.v1` conserva texto incompleto y editores interrumpidos con UUID estable y escrituras serializadas; revisar valida antes de crear/actualizar `estimates.v1`, sin debilitar sus contratos.

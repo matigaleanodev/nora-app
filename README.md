@@ -108,7 +108,6 @@ From a saved estimate detail, **Compartir PDF** generates an A4 document offline
 
 Sharing does not select the WhatsApp contact, confirm delivery or change estimate status. Select the destination app/contact yourself and mark the estimate sent separately. An error preserves the detail and allows retry; double requests are blocked while busy.
 
-
 ## Visual identity and draft recovery
 
 P1 petroleum + T2 offline Noto Sans + F1 precise. Home/My business uses real data; right drawer and tabs only on the three primary screens. Materials and labor use separate editors, repeated entry and isolated cancellation. `estimate-recovery.v1` retains incomplete text and interrupted editors with stable UUIDs and serialized writes; review validates before creating/updating `estimates.v1`, preserving its contracts.
