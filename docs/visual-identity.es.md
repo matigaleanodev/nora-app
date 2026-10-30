@@ -117,7 +117,7 @@ Exploración del ícono: [registro de prompts y selección](brand-explorations/n
 
 Contexto futuro declarado por el usuario: una versión con suscripción mediante Google Play podría incluir un asistente que ayude a armar presupuestos con pocas indicaciones. Esta intención da sentido a la metáfora de Nora como asistente, sin afirmar que hoy exista bot, conversación por voz ni atención humana. No modifica el alcance actual ni autoriza implementar suscripciones o asistencia en este hilo.
 
-Las reglas vigentes se desarrollan en [Diseño y experiencia de usuario](ux-guidelines.es.md). El [kit visual local](design-kit/README.es.md) reúne pantallas y componentes de referencia; el [traspaso a desarrollo](implementation-handoff.es.md) separa estado actual, diseño objetivo y pasos de implementación.
+Las reglas vigentes se desarrollan en [Diseño y experiencia de usuario](ux-guidelines.es.md). El [kit visual local](design-kit/README.es.md) reúne pantallas y componentes de referencia.
 
 ## Pendientes acotados
 

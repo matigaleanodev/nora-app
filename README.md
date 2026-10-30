@@ -1,6 +1,6 @@
 # Nora App
 
-[Visual identity](docs/visual-identity.md) · [Design and UX](docs/ux-guidelines.md) · [Design kit](docs/design-kit/README.md) · [Implementation handoff](docs/implementation-handoff.md).
+[Visual identity](docs/visual-identity.md) · [Design and UX](docs/ux-guidelines.md) · [Design kit](docs/design-kit/README.md).
 
 **N.O.R.A. — Notas, Organización, Registros y Administración.**
 
@@ -8,7 +8,7 @@ Android assistant for technicians: customers, estimates with materials/labor, an
 
 ## Current state
 
-Android app with a real business dashboard, local customer/estimate CRUD, and offline PDF sharing. Bottom tabs: Customers · Home · Estimates; additional options open in the right drawer. Estimates use compact materials/labor lists, dedicated editors, local autosave/recovery, and a separate validity/conditions screen. Customers archive/restore; only draft estimates can be edited/deleted. UUID entities and SQLite persistence remain offline, with no account/backend/ads. The approved visual identity uses deep teal, Noto Sans, and the Nora monogram. The user accepted the revised appearance; remaining device checks are tracked in [implementation status](docs/implementation-status.md).
+Android app with a real business dashboard, local customer/estimate CRUD, and offline PDF sharing. Bottom tabs: Customers · Home · Estimates; additional options open in the right drawer. Estimates use compact materials/labor lists, dedicated editors, local autosave/recovery, and a separate validity/conditions screen. Customers archive/restore; only draft estimates can be edited/deleted. UUID entities and SQLite persistence remain offline, with no account/backend/ads. The approved visual identity uses deep teal, Noto Sans, and the Nora monogram.
 
 Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6, Vitest 5. Resolved versions: package-lock.json. Native views through Fabric, not Ionic/WebView. Tailwind CSS 4 is configured through @ng-native/tailwind 0.13.0, Metro and src/styles.css. Global native styles are registered in src/main.ts.
 
@@ -108,8 +108,7 @@ From a saved estimate detail, **Compartir PDF** generates an A4 document offline
 
 Sharing does not select the WhatsApp contact, confirm delivery or change estimate status. Select the destination app/contact yourself and mark the estimate sent separately. An error preserves the detail and allows retry; double requests are blocked while busy.
 
-Validation for this branch is recorded in [implementation status and manual checks](docs/implementation-status.md). PDFs from the actual byte generator were visually reviewed, including 50 lines and extensive notes. Android execution, logos and sharing require manual testing before publishing.
 
 ## Visual identity and draft recovery
 
-P1 petroleum + T2 offline Noto Sans + F1 precise. Home/My business uses real data; right drawer and tabs only on the three primary screens. Materials and labor use separate editors, repeated entry and isolated cancellation. `estimate-recovery.v1` retains incomplete text and interrupted editors with stable UUIDs and serialized writes; review validates before creating/updating `estimates.v1`, preserving its contracts. See [implementation and manual checks](docs/implementation-status.md).
+P1 petroleum + T2 offline Noto Sans + F1 precise. Home/My business uses real data; right drawer and tabs only on the three primary screens. Materials and labor use separate editors, repeated entry and isolated cancellation. `estimate-recovery.v1` retains incomplete text and interrupted editors with stable UUIDs and serialized writes; review validates before creating/updating `estimates.v1`, preserving its contracts.
