@@ -49,7 +49,8 @@ AppRegistry.registerRunnable(
 
         // Actualiza las condiciones de estilos al rotar el dispositivo o cambiar el tema del sistema.
         // La app sigue usando tema claro; el motor mantiene disponible esta información.
-        watchConditions(app.engine);
+        const stopWatching = watchConditions(app.engine);
+        app.applicationRef.onDestroy(stopWatching);
         SplashScreen.hide();
       });
   },
