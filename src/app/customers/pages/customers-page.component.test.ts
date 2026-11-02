@@ -2,6 +2,7 @@ import { render, screen, userEvent, fireEvent } from "@ng-native/testing";
 import { Dialogs, HardwareBack } from "@ng-native/device";
 import { expect, test, vi } from "vitest";
 import { CustomersPageComponent } from "./customers-page.component";
+import { ContactActionsService } from "../services/contact-actions.service";
 import { CustomersService } from "../services/customers.service";
 import { CustomersPageService } from "../services/customers-page.service";
 import { NotificationService } from "../../shared/services/notification.service";
@@ -26,8 +27,10 @@ async function setup(empty = false, failLoad = false) {
     }),
   };
   const notifications = { success: vi.fn(), danger: vi.fn(), warning: vi.fn() };
+  const contacts = { open: vi.fn().mockResolvedValue(undefined) };
   const result = await render(CustomersPageComponent, {
     providers: [
+      { provide: ContactActionsService, useValue: contacts },
       { provide: HardwareBack, useValue: hardwareBack },
       { provide: CustomersService, useValue: customers },
       { provide: Dialogs, useValue: { confirm } },
@@ -38,6 +41,7 @@ async function setup(empty = false, failLoad = false) {
   await vi.waitFor(() => expect(vm.loading()).toBe(false));
   await result.detectChanges();
   return {
+    contacts,
     customers,
     confirm,
     notifications,
@@ -185,5 +189,43 @@ test("guarda el email informado por autocompletado nativo al salir del campo", a
   await user.press(screen.getByRole("button", { name: "Guardar cliente" }));
   expect(customers.create).toHaveBeenCalledWith(
     expect.objectContaining({ email: "ana@gmail.com" }),
+  );
+});
+
+test("llama, escribe por WhatsApp y email, y abre la dirección en Maps desde el detalle", async () => {
+  const { user, contacts } = await setup();
+  await user.press(
+    screen.getByRole("button", { name: "Ver cliente Ana García" }),
+  );
+  await user.press(screen.getByRole("button", { name: "Llamar a Ana García" }));
+  await user.press(
+    screen.getByRole("button", { name: "Enviar WhatsApp a Ana García" }),
+  );
+  await user.press(
+    screen.getByRole("button", { name: "Enviar email a Ana García" }),
+  );
+  await user.press(screen.getByRole("button", { name: "Ver Casa en Maps" }));
+  expect(contacts.open.mock.calls.map(([url]) => url)).toEqual([
+    "tel:+5493764123456",
+    "https://wa.me/5493764123456",
+    "mailto:ana@example.com",
+    expect.stringContaining("google.com/maps/search/?api=1&query="),
+  ]);
+});
+test("avisa con un mensaje claro si ninguna app puede abrir el enlace", async () => {
+  const { user, contacts, notifications } = await setup();
+  contacts.open.mockRejectedValueOnce(
+    new Error("No pudimos abrir WhatsApp. Revisá que esté instalado."),
+  );
+  await user.press(
+    screen.getByRole("button", { name: "Ver cliente Ana García" }),
+  );
+  await user.press(
+    screen.getByRole("button", { name: "Enviar WhatsApp a Ana García" }),
+  );
+  await vi.waitFor(() =>
+    expect(notifications.danger).toHaveBeenCalledWith(
+      "No pudimos abrir WhatsApp. Revisá que esté instalado.",
+    ),
   );
 });

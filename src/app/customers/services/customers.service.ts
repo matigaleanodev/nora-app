@@ -1,13 +1,15 @@
 import { inject, Injectable } from "@angular/core";
 import { LocalStorageService } from "../../core/storage/local-storage.service";
 import { assertUuid, IdService } from "../../shared/services/id.service";
+import { EMAIL_PATTERN, isValidPhone } from "../utils/customer-rules";
 import type {
   Customer,
   CustomerInput,
   CustomerAddress,
 } from "../models/customer.model";
 
-const STORAGE_KEY = "customers.v1";
+export const CUSTOMERS_STORAGE_KEY = "customers.v1";
+const STORAGE_KEY = CUSTOMERS_STORAGE_KEY;
 @Injectable({ providedIn: "root" })
 export class CustomersService {
   private readonly storage = inject(LocalStorageService);
@@ -63,18 +65,12 @@ export class CustomersService {
     input: CustomerInput,
   ): Promise<Omit<Customer, "id" | "createdAt" | "updatedAt" | "archived">> {
     if (!input.name?.trim()) throw new Error("El nombre es obligatorio.");
-    if (
-      input.phone &&
-      (!/^\d{2,4}$/.test(input.phone.areaCode) ||
-        !/^\d+$/.test(input.phone.number) ||
-        input.phone.areaCode.startsWith("0") ||
-        input.phone.areaCode.length + input.phone.number.length !== 10)
-    ) {
+    if (input.phone && !isValidPhone(input.phone)) {
       throw new Error(
         "Ingresá código de área sin 0 y número sin 15: diez dígitos en total.",
       );
     }
-    if (input.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email))
+    if (input.email && !EMAIL_PATTERN.test(input.email))
       throw new Error("Email inválido.");
     const addresses: CustomerAddress[] = await Promise.all(
       input.addresses.map(async (address) => {

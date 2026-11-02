@@ -102,3 +102,61 @@ test("la tarjeta de dirección admite piso y departamento opcionales", async () 
   expect(screen.queryByText(/Departamento:/)).toBeNull();
   expect(screen.queryByText(/Piso:/)).toBeNull();
 });
+test("el detalle emite llamar, WhatsApp, email y Maps con la dirección elegida", async () => {
+  const call = vi.fn();
+  const whatsapp = vi.fn();
+  const email = vi.fn();
+  const map = vi.fn();
+  await render(CustomersDetailComponent, {
+    inputs: { customer: customerFixture },
+    on: { call, whatsapp, email, map },
+  });
+  await userEvent.press(
+    screen.getByRole("button", { name: "Llamar a Ana García" }),
+  );
+  await userEvent.press(
+    screen.getByRole("button", { name: "Enviar WhatsApp a Ana García" }),
+  );
+  await userEvent.press(
+    screen.getByRole("button", { name: "Enviar email a Ana García" }),
+  );
+  await userEvent.press(
+    screen.getByRole("button", { name: "Ver Casa en Maps" }),
+  );
+  expect(call).toHaveBeenCalledOnce();
+  expect(whatsapp).toHaveBeenCalledOnce();
+  expect(email).toHaveBeenCalledOnce();
+  expect(map).toHaveBeenCalledWith(customerFixture.addresses[0]);
+});
+test("el detalle sólo ofrece las acciones que los datos permiten", async () => {
+  await render(CustomersDetailComponent, {
+    inputs: {
+      customer: {
+        ...customerFixture,
+        phone: { areaCode: "376", number: "4123456", whatsapp: false },
+        email: undefined,
+        addresses: [{ ...customerFixture.addresses[0]!, street: "", city: "" }],
+      },
+    },
+  });
+  expect(
+    screen.getByRole("button", { name: "Llamar a Ana García" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Enviar WhatsApp a Ana García" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Enviar email a Ana García" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Ver Casa en Maps" })).toBeNull();
+});
+test("sin teléfono ni email el detalle no muestra acciones de contacto", async () => {
+  await render(CustomersDetailComponent, {
+    inputs: {
+      customer: { ...customerFixture, phone: undefined, email: undefined },
+    },
+  });
+  expect(
+    screen.queryByRole("button", { name: /Llamar|WhatsApp|email/ }),
+  ).toBeNull();
+});

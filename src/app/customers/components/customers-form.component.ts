@@ -1,4 +1,4 @@
-import { Component, inject, input, output } from "@angular/core";
+import { Component, DestroyRef, inject, input, output } from "@angular/core";
 import { Pressable, Text, View } from "@ng-native/components";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
 import { FormFieldComponent } from "../../shared/components/form-field/form-field.component";
@@ -13,7 +13,6 @@ import {
 } from "./customer-address-editor.component";
 @Component({
   selector: "nora-customers-form",
-  providers: [AddressEditorService],
   imports: [
     ModalComponent,
     ContactFieldsComponent,
@@ -92,6 +91,10 @@ import {
 })
 export class CustomersFormComponent {
   protected readonly editor = inject(AddressEditorService);
+  constructor() {
+    // Un borrador sin confirmar no sobrevive a la pantalla que lo abrió.
+    inject(DestroyRef).onDestroy(() => this.editor.cancel());
+  }
   readonly form = input.required<CustomerForm>();
   readonly busy = input(false);
   readonly changed = output<Partial<CustomerForm>>();
