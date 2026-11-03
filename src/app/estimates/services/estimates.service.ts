@@ -13,7 +13,8 @@ import {
 } from "../models/estimate.model";
 import { calculateEstimateTotal } from "../utils/estimate-totals";
 
-const STORAGE_KEY = "estimates.v1";
+export const ESTIMATES_STORAGE_KEY = "estimates.v1";
+const STORAGE_KEY = ESTIMATES_STORAGE_KEY;
 @Injectable({ providedIn: "root" })
 export class EstimatesService {
   private readonly storage = inject(LocalStorageService);

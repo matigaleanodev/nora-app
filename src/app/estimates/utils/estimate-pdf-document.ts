@@ -17,6 +17,12 @@ export interface PdfLogo {
   readonly bytes: Uint8Array;
   readonly mimeType: "image/png" | "image/jpeg";
 }
+/** Incrusta el logo en el documento; es la misma decodificación que usa el PDF y que valida las copias. */
+export async function embedLogo(document: PDFDocument, logo: PdfLogo) {
+  return logo.mimeType === "image/png"
+    ? await document.embedPng(logo.bytes)
+    : await document.embedJpg(logo.bytes);
+}
 export interface PdfFonts {
   readonly regular: Uint8Array;
   readonly bold: Uint8Array;
@@ -222,10 +228,7 @@ export async function buildEstimatePdf(
   const headerTop = y;
   let logoWidth = 0;
   if (logo) {
-    const image =
-      logo.mimeType === "image/png"
-        ? await document.embedPng(logo.bytes)
-        : await document.embedJpg(logo.bytes);
+    const image = await embedLogo(document, logo);
     const dimensions = image.scaleToFit(56, 56);
     page!.drawImage(image, {
       x: MARGIN,

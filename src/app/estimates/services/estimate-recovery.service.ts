@@ -21,7 +21,8 @@ export interface EstimateRecovery {
   readonly editor: EstimateEditorRecovery | null;
   readonly updatedAt: string;
 }
-const KEY = "estimate-recovery.v1";
+export const ESTIMATE_RECOVERY_KEY = "estimate-recovery.v1";
+const KEY = ESTIMATE_RECOVERY_KEY;
 const object = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 function item(value: unknown): value is EstimateItemForm {
@@ -37,7 +38,8 @@ function item(value: unknown): value is EstimateItemForm {
     (value["id"] === undefined || typeof value["id"] === "string")
   );
 }
-function valid(value: unknown): value is EstimateRecovery {
+/** Reglas de un borrador en curso; también las usa la importación de copias de seguridad. */
+export function isEstimateRecovery(value: unknown): value is EstimateRecovery {
   if (
     !object(value) ||
     typeof value["id"] !== "string" ||
@@ -87,7 +89,7 @@ export class EstimateRecoveryService {
     return this.read(await this.storage.read<unknown>(KEY));
   }
   save(value: EstimateRecovery): Promise<void> {
-    if (!valid(value))
+    if (!isEstimateRecovery(value))
       return Promise.reject(
         new Error("No pudimos conservar esta edición. Revisá los datos."),
       );
@@ -104,7 +106,7 @@ export class EstimateRecoveryService {
   }
   private read(value: unknown): readonly EstimateRecovery[] {
     if (value === null) return [];
-    if (!Array.isArray(value) || !value.every(valid))
+    if (!Array.isArray(value) || !value.every(isEstimateRecovery))
       throw new Error(
         "No pudimos leer las ediciones guardadas. Los datos originales se conservaron.",
       );
