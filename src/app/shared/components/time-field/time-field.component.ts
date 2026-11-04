@@ -1,0 +1,59 @@
+import { Component, inject, input, output, signal } from "@angular/core";
+import { Pressable, Text, View } from "@ng-native/components";
+import { DatePickerService } from "../../services/date-picker.service";
+import { IconComponent } from "../icon/icon.component";
+@Component({
+  selector: "nora-time-field",
+  imports: [Pressable, Text, View, IconComponent],
+  template: `<view class="gap-2">
+    <text class="field-label">{{ label() }}</text>
+    <view class="date-input flex-row items-center">
+      <pressable
+        class="date-input-value flex-1 justify-center"
+        accessibilityRole="button"
+        [accessibilityLabel]="label()"
+        [accessibilityState]="{
+          disabled: disabled() || opening(),
+          busy: opening(),
+        }"
+        [disabled]="disabled() || opening()"
+        (press)="choose()"
+      >
+        <text class="body-text">{{
+          value() ? value() + " hs" : "Sin hora · tocá para elegir"
+        }}</text>
+      </pressable>
+      @if (value()) {
+        <pressable
+          class="date-input-clear items-center justify-center"
+          accessibilityRole="button"
+          accessibilityLabel="Quitar hora"
+          [accessibilityState]="{ disabled: disabled() || opening() }"
+          [disabled]="disabled() || opening()"
+          (press)="valueChange.emit('')"
+        >
+          <nora-icon name="bootstrapTrash3" [size]="20" />
+        </pressable>
+      }
+    </view>
+  </view>`,
+})
+export class TimeFieldComponent {
+  readonly label = input.required<string>();
+  /** Hora local HH:mm; vacío cuando no hay hora. */
+  readonly value = input("");
+  readonly disabled = input(false);
+  readonly valueChange = output<string>();
+  private readonly picker = inject(DatePickerService);
+  protected readonly opening = signal(false);
+  protected async choose(): Promise<void> {
+    if (this.disabled() || this.opening()) return;
+    this.opening.set(true);
+    try {
+      const value = await this.picker.pickTime(this.value());
+      if (value !== null) this.valueChange.emit(value);
+    } finally {
+      this.opening.set(false);
+    }
+  }
+}

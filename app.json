@@ -34,6 +34,12 @@
       ],
       "expo-sharing",
       [
+        "expo-notifications",
+        {
+          "color": "#17645B"
+        }
+      ],
+      [
         "expo-font",
         {
           "fonts": [
