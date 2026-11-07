@@ -5,7 +5,9 @@ const sqlite = vi.hoisted(() => ({
   openDatabaseAsync: vi.fn(),
   execAsync: vi.fn(),
   getFirstAsync: vi.fn(),
+  getAllAsync: vi.fn(),
   runAsync: vi.fn(),
+  withTransactionAsync: vi.fn(),
 }));
 vi.mock("expo-sqlite", () => ({ openDatabaseAsync: sqlite.openDatabaseAsync }));
 
@@ -15,6 +17,10 @@ beforeEach(() => {
   sqlite.execAsync.mockResolvedValue(undefined);
   sqlite.getFirstAsync.mockResolvedValue(null);
   sqlite.runAsync.mockResolvedValue(undefined);
+  sqlite.getAllAsync.mockResolvedValue([]);
+  sqlite.withTransactionAsync.mockImplementation(
+    async (task: () => Promise<void>) => task(),
+  );
 });
 
 describe("LocalStorageService", () => {
@@ -84,6 +90,57 @@ describe("LocalStorageService", () => {
       ),
     );
     expect(value).toBe(5);
+  });
+  test("lee varias claves en una consulta con parámetros y deserializa cada valor", async () => {
+    const storage = new LocalStorageService();
+    sqlite.getAllAsync.mockResolvedValueOnce([
+      { key: "clientes", value: '[{"name":"Ana"}]' },
+    ]);
+    expect(await storage.readMany(["clientes", "ausente"])).toEqual({
+      clientes: [{ name: "Ana" }],
+    });
+    expect(sqlite.getAllAsync).toHaveBeenCalledWith(
+      expect.stringContaining("IN (?, ?)"),
+      "clientes",
+      "ausente",
+    );
+  });
+  test("reemplaza varias claves en una transacción y elimina las que no tienen valor", async () => {
+    const storage = new LocalStorageService();
+    await storage.replaceMany(["clientes", "presupuestos"], {
+      clientes: ["Ana"],
+    });
+    expect(sqlite.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(sqlite.runAsync).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("INSERT INTO app_storage"),
+      "clientes",
+      '["Ana"]',
+    );
+    expect(sqlite.runAsync).toHaveBeenNthCalledWith(
+      2,
+      "DELETE FROM app_storage WHERE key = ?",
+      "presupuestos",
+    );
+  });
+  test("un reemplazo fallido se propaga y no bloquea las operaciones siguientes", async () => {
+    const storage = new LocalStorageService();
+    sqlite.withTransactionAsync.mockRejectedValueOnce(new Error("Disco lleno"));
+    await expect(storage.replaceMany(["clientes"], {})).rejects.toThrow(
+      "Disco lleno",
+    );
+    await expect(storage.readMany(["clientes"])).resolves.toEqual({});
+  });
+  test("reemplazar espera las modificaciones en curso para no perderlas", async () => {
+    const storage = new LocalStorageService();
+    const order: string[] = [];
+    sqlite.runAsync.mockImplementation(async (sql: string) => {
+      order.push(sql.startsWith("DELETE") ? "reemplazo" : "modificación");
+    });
+    const update = storage.update("clientes", () => ["Ana"]);
+    const replace = storage.replaceMany(["clientes"], {});
+    await Promise.all([update, replace]);
+    expect(order).toEqual(["modificación", "reemplazo"]);
   });
   test("continúa procesando modificaciones tras un error de validación o guardado", async () => {
     const storage = new LocalStorageService();

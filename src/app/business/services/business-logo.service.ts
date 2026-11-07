@@ -51,6 +51,41 @@ export class BusinessLogoService {
     }
     return { uri: target.uri, mimeType: logo.mimeType };
   }
+  /** Lee el logo guardado para una copia de seguridad; undefined si el archivo ya no existe. */
+  async readBase64(logo: BusinessLogo): Promise<string | undefined> {
+    try {
+      const { File } = await import("expo-file-system");
+      const file = new File(logo.uri);
+      if (!file.exists || file.size <= 0 || file.size > MAX_LOGO_BYTES)
+        return undefined;
+      return await file.base64();
+    } catch {
+      return undefined;
+    }
+  }
+  /** Escribe en el almacenamiento durable un logo restaurado, sin dejar archivos parciales. */
+  async restore(
+    base64: string,
+    mimeType: BusinessLogo["mimeType"],
+  ): Promise<BusinessLogo> {
+    if (!(mimeType in EXTENSIONS)) throw new Error("Formato de logo inválido.");
+    const { Directory, File, Paths } = await import("expo-file-system");
+    const directory = new Directory(Paths.document, "business-logos");
+    directory.create({ idempotent: true, intermediates: true });
+    const target = new File(
+      directory,
+      `${await this.ids.create()}.${EXTENSIONS[mimeType]}`,
+    );
+    try {
+      target.write(base64, { encoding: "base64" });
+      if (!target.exists || target.size <= 0)
+        throw new Error("No pudimos restaurar el logo en este teléfono.");
+    } catch (error) {
+      if (target.exists) target.delete();
+      throw error;
+    }
+    return { uri: target.uri, mimeType };
+  }
   /** La limpieza nunca borra imágenes originales ni impide guardar el perfil. */
   async removeOwned(logo: BusinessLogo | undefined): Promise<void> {
     if (!logo) return;

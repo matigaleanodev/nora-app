@@ -4,10 +4,23 @@ import { CustomersPageService } from "./customers/services/customers-page.servic
 import { EstimatesPageService } from "./estimates/services/estimates-page.service";
 import type { Estimate } from "./estimates/models/estimate.model";
 import { PageLayoutComponent } from "./shared/components/page-layout/page-layout.component";
+import { AgendaPageComponent } from "./agenda/pages/agenda-page.component";
+import { AgendaPageService } from "./agenda/services/agenda-page.service";
+import { BackupPageComponent } from "./backup/pages/backup-page.component";
+import { BackupPageService } from "./backup/services/backup-page.service";
 import { BusinessPageComponent } from "./business/pages/business-page.component";
 import { BusinessPageService } from "./business/services/business-page.service";
+import { AddressEditorService } from "./customers/services/address-editor.service";
 import { IconComponent } from "./shared/components/icon/icon.component";
-import { Component, inject, signal, computed, DestroyRef } from "@angular/core";
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  DestroyRef,
+  effect,
+  untracked,
+} from "@angular/core";
 import {
   Modal,
   Pressable,
@@ -33,6 +46,8 @@ type Tab = "customers" | "home" | "estimates";
     Modal,
     Pressable,
     IconComponent,
+    AgendaPageComponent,
+    BackupPageComponent,
     BusinessPageComponent,
     PageLayoutComponent,
     SafeAreaProvider,
@@ -49,7 +64,9 @@ type Tab = "customers" | "home" | "estimates";
     <safe-area-provider>
       <safe-area-view class="app-screen flex-1">
         <view class="flex-1">
-          @if (shell.information()) {
+          @if (shell.information() === "backup") {
+            <nora-backup />
+          } @else if (shell.information()) {
             <nora-page-layout
               [title]="
                 shell.information() === 'help' ? 'Ayuda' : 'Acerca de Nora'
@@ -60,7 +77,8 @@ type Tab = "customers" | "home" | "estimates";
               @if (shell.information() === "help") {
                 <text class="body-text"
                   >Tus clientes y presupuestos se guardan en este teléfono. El
-                  guardado local no es una copia de seguridad.</text
+                  guardado local no es una copia de seguridad: guardá una desde
+                  el menú, en Copia de seguridad.</text
                 >
                 <text class="body-text"
                   >Revisá el presupuesto antes de compartir el PDF. Compartir no
@@ -76,6 +94,8 @@ type Tab = "customers" | "home" | "estimates";
             </nora-page-layout>
           } @else if (business.visible()) {
             <nora-business />
+          } @else if (agenda.visible()) {
+            <nora-agenda />
           } @else {
             @switch (tab()) {
               @case ("home") {
@@ -156,6 +176,16 @@ type Tab = "customers" | "home" | "estimates";
                   (pressed)="openBusiness()"
                 />
                 <nora-navigation-row
+                  text="Agenda"
+                  detail="Visitas y seguimientos con aviso"
+                  (pressed)="openAgenda()"
+                />
+                <nora-navigation-row
+                  text="Copia de seguridad"
+                  detail="Guardar y restaurar tus datos"
+                  (pressed)="openInformation('backup')"
+                />
+                <nora-navigation-row
                   text="Ayuda"
                   detail="Uso y guardado local"
                   (pressed)="openInformation('help')"
@@ -180,6 +210,7 @@ export class App {
   protected readonly showTabs = computed(
     () =>
       !this.business.visible() &&
+      !this.agenda.visible() &&
       !this.shell.information() &&
       (this.tab() === "home" ||
         (this.tab() === "customers"
@@ -190,7 +221,51 @@ export class App {
     this.shell.menuOpen.set(false);
     void this.business.open();
   }
-  protected openInformation(value: "help" | "about"): void {
+  /**
+   * Muestra la visita de un aviso por encima de la pantalla actual. Mientras algo escribe o hay un
+   * borrador sin confirmar, el aviso queda pendiente y se abre al terminar. Si el usuario decide seguir
+   * editando Mi negocio o la agenda, esa decisión se respeta y la pantalla no cambia.
+   */
+  private async openReminder(id: string): Promise<void> {
+    if (this.reminderBlocked()) {
+      this.pendingVisit.set(id);
+      return;
+    }
+    this.opening.set(true);
+    try {
+      this.shell.menuOpen.set(false);
+      if (this.shell.information() === "backup") this.backupPage.close();
+      else this.shell.information.set(null);
+      if (this.business.visible()) {
+        await this.business.close();
+        if (this.business.visible()) {
+          // Seguir editando se respeta y descarta el toque repetido del mismo aviso; si Mi negocio no
+          // cerró porque empezó una operación, se reintenta.
+          if (this.interrupting()) this.pendingVisit.set(id);
+          else this.dropDuplicate(id);
+          return;
+        }
+      }
+      // Cerrar Mi negocio es asíncrono: otra operación pudo empezar mientras tanto.
+      if (this.interrupting()) {
+        this.pendingVisit.set(id);
+        return;
+      }
+      if (!(await this.agenda.openVisit(id))) this.dropDuplicate(id);
+    } finally {
+      this.opening.set(false);
+    }
+  }
+  /** Quien eligió seguir editando no vuelve a ver la misma confirmación por un toque repetido. */
+  private dropDuplicate(id: string): void {
+    if (this.pendingVisit() === id) this.pendingVisit.set(null);
+  }
+  protected openAgenda(): void {
+    this.shell.menuOpen.set(false);
+    this.shell.information.set(null);
+    void this.agenda.open();
+  }
+  protected openInformation(value: "help" | "about" | "backup"): void {
     this.shell.menuOpen.set(false);
     this.shell.information.set(value);
   }
@@ -210,6 +285,25 @@ export class App {
     this.estimates.open(value);
   }
   protected readonly business = inject(BusinessPageService);
+  protected readonly agenda = inject(AgendaPageService);
+  private readonly backupPage = inject(BackupPageService);
+  private readonly addressEditor = inject(AddressEditorService);
+  /** Hay un guardado, una lectura o un borrador que un cambio de pantalla interrumpiría. */
+  private readonly interrupting = computed(
+    () =>
+      this.backupPage.busy() ||
+      this.business.busy() ||
+      this.business.loading() ||
+      this.agenda.busy() ||
+      this.addressEditor.draft() !== null,
+  );
+  /** Un aviso se está abriendo (incluida la confirmación de descarte): otro toque espera a que termine. */
+  private readonly opening = signal(false);
+  private readonly reminderBlocked = computed(
+    () => this.opening() || this.interrupting(),
+  );
+  /** Aviso tocado durante una operación en curso: se abre cuando termina. */
+  private readonly pendingVisit = signal<string | null>(null);
   protected readonly tab = signal<Tab>("home");
   protected readonly tabs: readonly {
     id: Tab;
@@ -231,6 +325,11 @@ export class App {
           this.shell.menuOpen.set(false);
           return true;
         }
+        if (this.shell.information() === "backup") {
+          // Misma lógica que el botón Volver: no cierra mientras la copia trabaja, pero consume el gesto.
+          this.backupPage.close();
+          return true;
+        }
         if (this.shell.information()) {
           this.shell.information.set(null);
           return true;
@@ -239,5 +338,16 @@ export class App {
       }),
     );
     inject(StatusBar).set({ style: "dark" });
+    void this.agenda.bindNotifications(
+      inject(DestroyRef),
+      (id) => void this.openReminder(id),
+    );
+    effect(() => {
+      const id = this.pendingVisit();
+      if (id && !this.reminderBlocked()) {
+        this.pendingVisit.set(null);
+        untracked(() => void this.openReminder(id));
+      }
+    });
   }
 }

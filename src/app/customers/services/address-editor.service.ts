@@ -6,8 +6,11 @@ export interface AddressDraft {
   readonly address: Address;
 }
 
-/** Aísla los cambios del modal hasta que el usuario confirma la dirección. */
-@Injectable()
+/**
+ * Aísla los cambios del modal hasta que el usuario confirma la dirección. Es un servicio de la app para
+ * que el shell sepa si hay un borrador abierto y no desmonte Clientes antes de confirmarlo o cancelarlo.
+ */
+@Injectable({ providedIn: "root" })
 export class AddressEditorService {
   private readonly state = signal<AddressDraft | null>(null);
   private readonly errorState = signal("");

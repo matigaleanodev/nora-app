@@ -7,9 +7,20 @@ import {
   signal,
 } from "@angular/core";
 import { Dialogs, HardwareBack, Keyboard } from "@ng-native/device";
+import { ContactActionsService } from "./contact-actions.service";
 import { CustomersService } from "./customers.service";
 import { NotificationService } from "../../shared/services/notification.service";
-import { type Customer, type CustomerInput } from "../models/customer.model";
+import {
+  type Customer,
+  type CustomerAddress,
+  type CustomerInput,
+} from "../models/customer.model";
+import {
+  emailLink,
+  mapsLink,
+  phoneLink,
+  whatsappLink,
+} from "../utils/contact-links";
 import type { CustomerForm } from "../models/customer-form.model";
 
 const emptyForm = (): CustomerForm => ({
@@ -26,6 +37,7 @@ const emptyForm = (): CustomerForm => ({
 export class CustomersPageService {
   private readonly customers = inject(CustomersService);
   private readonly notifications = inject(NotificationService);
+  private readonly contacts = inject(ContactActionsService);
   private readonly dialogs = inject(Dialogs);
   private readonly keyboard = inject(Keyboard);
   private readonly hardwareBack = inject(HardwareBack);
@@ -212,6 +224,37 @@ export class CustomersPageService {
       this.fail(error, "No pudimos guardar el cliente.");
     } finally {
       this.working.set(false);
+    }
+  }
+  /** Abre otra app con los datos del cliente; no modifica nada ni marca ninguna entrega. */
+  call(): void {
+    const phone = this.selected()?.phone;
+    if (phone)
+      void this.contact(phoneLink(phone), "No pudimos abrir el teléfono.");
+  }
+  whatsapp(): void {
+    const phone = this.selected()?.phone;
+    if (phone?.whatsapp)
+      void this.contact(
+        whatsappLink(phone),
+        "No pudimos abrir WhatsApp. Revisá que esté instalado.",
+      );
+  }
+  email(): void {
+    const email = this.selected()?.email;
+    if (email)
+      void this.contact(emailLink(email), "No encontramos una app de correo.");
+  }
+  openMap(address: CustomerAddress): void {
+    void this.contact(mapsLink(address), "No pudimos abrir el mapa.");
+  }
+  private async contact(url: string, failure: string): Promise<void> {
+    try {
+      await this.contacts.open(url, failure);
+    } catch (error: unknown) {
+      this.notifications.danger(
+        error instanceof Error ? error.message : failure,
+      );
     }
   }
   async archive(): Promise<void> {

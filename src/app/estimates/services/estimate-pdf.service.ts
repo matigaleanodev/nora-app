@@ -2,6 +2,7 @@ import { inject, Injectable } from "@angular/core";
 import type { File, Directory } from "expo-file-system";
 import { BusinessProfileService } from "../../business/services/business-profile.service";
 import type { BusinessLogo } from "../../business/models/business-profile.model";
+import { convertWebpToPng } from "../../shared/utils/webp-to-png";
 import { IdService } from "../../shared/services/id.service";
 import type { Estimate } from "../models/estimate.model";
 import {
@@ -134,23 +135,10 @@ export class EstimatePdfService {
         bytes: await file.bytes(),
         mimeType: logo.mimeType as "image/png" | "image/jpeg",
       };
-    const { ImageManipulator, SaveFormat } =
-      await import("expo-image-manipulator");
-    const context = ImageManipulator.manipulate(file.uri);
-    const image = await context.renderAsync();
-    try {
-      const result = await image.saveAsync({ format: SaveFormat.PNG });
-      const converted = new File(result.uri);
-      try {
-        return { bytes: await converted.bytes(), mimeType: "image/png" };
-      } finally {
-        if (converted.uri.startsWith(Paths.cache.uri))
-          this.removeFile(converted);
-      }
-    } finally {
-      image.release();
-      context.release();
-    }
+    return {
+      bytes: await convertWebpToPng(file.uri),
+      mimeType: "image/png",
+    };
   }
   private removeExpired(directory: Directory, FileType: typeof File): void {
     try {

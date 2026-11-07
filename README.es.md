@@ -1,113 +1,72 @@
 # Nora App
 
-[Identidad visual](docs/visual-identity.es.md) · [Diseño y UX](docs/ux-guidelines.es.md) · [Kit visual](docs/design-kit/README.es.md).
+[English](README.md)
 
-**N.O.R.A. — Notas, Organización, Registros y Administración.**
+![Angular 22](https://img.shields.io/badge/Angular-22-DD0031?logo=angular&logoColor=white) ![Angular Native 0.22](https://img.shields.io/badge/Angular_Native-0.22-17645B) ![Expo SDK 57](https://img.shields.io/badge/Expo-SDK_57-000020?logo=expo&logoColor=white) ![React Native 0.86](https://img.shields.io/badge/React_Native-0.86-61DAFB?logo=react&logoColor=black) ![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white) ![Vitest](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest&logoColor=white)
 
-Asistente Android para técnicos: clientes, presupuestos con materiales/mano de obra y PDF para compartir.
+**N.O.R.A. — Notas, Organización, Registros y Administración.** App Android offline para técnicos independientes: clientes, presupuestos con materiales y mano de obra, PDF para compartir, agenda de visitas con avisos locales y copia de seguridad manual. Funciona sin cuenta, backend ni anuncios.
 
-## Estado actual
+## Qué hace
 
-App Android con resumen real del negocio, CRUD local de clientes/presupuestos y PDF para compartir offline. Tabs inferiores: Clientes · Inicio · Presupuestos; las opciones adicionales están en el menú lateral derecho. Los presupuestos usan listas compactas de materiales/mano de obra, editores dedicados, autoguardado/recuperación local y pantalla separada de vigencia/condiciones. Clientes se archivan/restauran; sólo los presupuestos en borrador se editan/eliminan. Entidades UUID y persistencia SQLite offline, sin cuenta/backend/ads. La identidad aprobada usa verde petróleo, Noto Sans y el monograma de Nora.
+- **Clientes:** nombre, teléfono argentino opcional, varias direcciones con nombre, email y notas. Se archivan en lugar de eliminarse y ofrecen acciones de llamar, WhatsApp, email y mapa.
+- **Presupuestos:** referencian un cliente y una dirección, con ítems de materiales y mano de obra, ARS o USD, vigencia opcional y notas públicas. Los borradores se editan y se autoguardan; un presupuesto enviado conserva la copia de los datos del cliente.
+- **PDF:** documento A4 generado offline y compartido mediante la hoja de Android.
+- **Agenda:** visitas y seguimientos, con cliente opcional y aviso local. Inicio muestra las visitas vencidas, de hoy y próximas.
+- **Mi negocio:** nombre del proveedor, contacto y logo que se usan en cada PDF.
+- **Copia de seguridad:** un único archivo JSON con todos los datos, que se guarda o restaura desde el menú lateral.
 
-Manifest: Angular 22, Angular Native 0.13.0, Expo SDK 57, React Native 0.86, TypeScript 6 y Vitest 5. Versiones resueltas en package-lock.json. Vistas nativas mediante Fabric, no Ionic/WebView. Tailwind CSS 4 integrado con @ng-native/tailwind 0.13.0, Metro y src/styles.css; estilos globales nativos registrados en src/main.ts.
+Las pestañas inferiores son Clientes, Inicio y Presupuestos; las demás opciones están en el menú lateral derecho.
 
-## Desarrollo Ubuntu/WSL
+## Stack y arquitectura
+
+Angular 22 con componentes standalone y signals, renderizado como vistas nativas por Angular Native 0.22.2 mediante Fabric sobre Expo SDK 57 y React Native 0.86 (New Architecture). No usa Ionic, WebView ni DOM. Tailwind CSS 4 se integra con `@ng-native/tailwind` 0.22.2: `metro.config.js` compila `src/styles.css` y `src/main.ts` registra los estilos generados como estilos globales nativos. Native CSS es un subconjunto, por lo que no se usa el preflight del navegador. Las versiones resueltas están en `package-lock.json`; todos los paquetes `@ng-native/*` se actualizan juntos.
+
+Los componentes solo presentan estado; los servicios de página coordinan los flujos con signals; los servicios de dominio validan y persisten. Los datos viven en `expo-sqlite` como claves JSON versionadas, con operaciones de lectura-modificación-escritura serializadas dentro de la app. Los ID son UUID v4 (`expo-crypto`). Los PDF usan `pdf-lib` y `@pdf-lib/fontkit` con Noto Sans incluida offline. Los avisos usan `expo-notifications`; no hay servidor push.
+
+## Datos locales
+
+| Clave                  | Contenido                                                       |
+| ---------------------- | --------------------------------------------------------------- |
+| `customers.v1`         | Clientes y sus direcciones                                      |
+| `estimates.v1`         | Presupuestos con ítems y copia de datos del cliente             |
+| `business-profile.v1`  | Perfil del proveedor y referencia al logo                       |
+| `estimate-recovery.v1` | Formularios de presupuesto incompletos y editores interrumpidos |
+| `visits.v1`            | Visitas y seguimientos de la agenda                             |
+
+Un cambio de esquema exige una migración explícita. Los formularios sin guardar sobreviven al cambio de pestaña durante la sesión, y volver atrás pide confirmación antes de descartar cambios.
+
+## Contratos y límites
+
+**Presupuestos.** Los precios son centavos enteros no negativos. Las cantidades son positivas, hasta 1.000.000 y con hasta tres decimales; los subtotales redondean half-up y los totales suman los subtotales redondeados. No hay conversión de moneda, impuestos ni descuentos. El estado del presupuesto es solo seguimiento local.
+
+**PDF.** Los datos del proveedor se leen al exportar. Una copia con nombre único queda en `cache/estimate-pdfs` y las copias de más de 24 horas se eliminan en exportaciones posteriores. Compartir no elige destinatario, no confirma la entrega ni cambia el estado del presupuesto.
+
+**Logo.** JPG, PNG o WebP de hasta 5 MB, copiado al directorio privado `business-logos`; el original de la galería nunca se modifica.
+
+**Acciones de contacto.** `tel:`, `https://wa.me`, `mailto:` y un enlace de búsqueda en Google Maps.
+
+**Agenda y avisos.** Solo se programan las visitas pendientes con un aviso futuro. Los avisos se programan a las 08:00 si la visita no tiene hora y 30 minutos antes si la tiene; Android puede demorar la entrega. El identificador nativo de la notificación es el UUID de la visita, por lo que reprogramar reemplaza el aviso anterior; las operaciones sobre avisos se ejecutan una por una y se concilian al iniciar, al abrir la agenda y tras restaurar una copia. El permiso de notificaciones se pide al programar el primer aviso; sin él, las visitas se guardan sin aviso. Tocar un aviso abre la visita, esperando cualquier guardado en curso y respetando las ediciones sin guardar. La sincronización con el calendario del dispositivo y los avisos de vigencia de presupuestos no están implementados. Expo Go SDK 57 admite estos avisos locales; solo el push remoto no está disponible allí.
+
+**Copia de seguridad.** `copia-nora-YYYY-MM-DD.json`, formato versión 1, con las cinco claves anteriores y un logo opcional en base64. El límite de 40 MiB por archivo rige al exportar y al importar: una exportación mayor se descarta y no se comparte. No se reemplaza nada hasta que todo el archivo valida: formato y fecha, ID y números de presupuesto únicos, reglas de dominio de cada registro y el logo, que exige un perfil de negocio, hasta 5 MiB decodificado y hasta 16 megapíxeles, y debe poder prepararse para el PDF (PNG y JPEG se decodifican con `pdf-lib`; el WebP debe convertirse con la misma conversión nativa que usa el PDF y su PNG convertido respeta el mismo tope). Restaurar pide confirmación, reemplaza todos los datos locales y reconstruye los avisos. La ruta local del logo y la marca de aviso de cada visita no se exportan. No existe copia automática ni en la nube.
+
+## Desarrollo local
 
 ```bash
-cd ~/workspace/Projects/nora-app
 npm ci
 npm run typecheck
 npm test
+npm run format:check
+npx expo export --platform android
 npm start
 ```
 
-npm run android inicia Metro y solicita dispositivo/emulador Android. ADB debe ser accesible desde WSL y el teléfono debe llegar a Metro. Expo Go requiere SDK compatible y módulos incluidos; de lo contrario, development build. Estos comandos no generan APK release firmado.
+Node 24 según `.nvmrc`. `npm start` abre Expo Go mediante un túnel (`expo start --go --tunnel`); `npm run android` inicia Metro y solicita un dispositivo o emulador, por lo que ADB debe ser accesible y el teléfono debe llegar a Metro. Expo Go requiere un SDK compatible y los módulos nativos incluidos; de lo contrario, usá un development build. Estos comandos no generan un APK release firmado.
 
-Entrada: src/main.ts. Raíz: src/app/app.ts. Pruebas de interacción: src/app/app.test.ts. Metro: metro.config.js. Metadatos: app.json.
+Punto de entrada: `src/main.ts`; componente raíz: `src/app/app.ts`; metadatos: `app.json`. Las pruebas corren sobre un host nativo simulado y simulan SQLite, Crypto, Sharing, FileSystem y Notifications, por lo que no prueban el comportamiento en un dispositivo. CI ejecuta formato, tipos, pruebas y la exportación de Android.
 
-## Alcance previsto
+## Documentación
 
-V1 gratuita, offline, guardado local persistente, sin cuenta ni ads. Primer flujo: cliente → ítems → totales → guardar → PDF/compartir. Exportación/importación manual para portabilidad. Primer tester: el papá del dueño.
-
-Después: fotos/ubicación, recordatorios y biometría opcional. Etapa paga con base remota, backup/recuperación y sync entre dispositivos mediante nora-api, conservando uso local gratuito. Biometría y autenticación de cuenta son distintas. Ads futuros sólo con banners pequeños fuera de edición/PDF/compartir. Puente Modo Playa como posibilidad futura.
-
-## Convenciones
-
-Identificadores en inglés; comentarios, documentación de código y tests en español. Angular moderno y features completas incrementales. agents.md y roadmap.md locales ignorados por Git. AGENTS.md/CLAUDE.md del starter eliminados tras consolidar reglas nativas útiles en agents.md. README y traducción se versionan.
-
-[Angular Native](https://ng-native.com/guide/getting-started) · [Nora API](https://github.com/matigaleanodev/nora-api)
-
-## Dominio de clientes y presupuestos
-
-Carpetas por dominio como en los otros Angular: `customers/models`, `customers/services`, `estimates/models`, `estimates/services` y `estimates/utils`; contratos de entidad/UUID y generación de UUID en `shared`. Los servicios exponen operaciones locales asíncronas; la UI se conecta mediante componentes nativos delgados y servicios de página basados en signals. Las tareas de ejemplo siguen independientes.
-
-Clientes con nombre, teléfono argentino opcional (código de área sin 0, número sin 15, diez dígitos combinados, formato fijo +549 e indicador WhatsApp), múltiples direcciones con nombre, email y notas opcionales. Clientes, direcciones, ítems y presupuestos usan UUID; Expo Crypto genera UUID v4. Los clientes se archivan/restauran en lugar de eliminarse para preservar referencias. Nombre y nombre visible de dirección obligatorios; los demás campos de dirección pueden quedar incompletos.
-
-Presupuestos con referencia al cliente y dirección opcional, número visible único ingresado por el usuario, descripción, ítems de materiales/mano de obra, ARS/USD, vigencia opcional (YYYY-MM-DD) y notas públicas. Unidades: m, m², m³, litros, unidades, horas y trabajo completo. Los borradores admiten lista vacía; enviar requiere al menos un ítem. Se pueden editar/eliminar borradores; luego pasan a enviado y aceptado/rechazado. Al guardar el borrador se copia el cliente/dirección; esa copia queda fija al enviarlo. Editar el cliente después no reescribe presupuestos. Sin conversión de moneda, impuestos ni descuentos; PDF/compartir disponible y estado sólo para seguimiento local.
-
-Precios en centavos enteros no negativos. Cantidades positivas, máximo 1.000.000, hasta tres decimales. Cada subtotal redondea mitades hacia arriba a centavos mediante aritmética entera; el total suma subtotales redondeados, con límites de enteros seguros. Los totales se calculan, no se guardan. Claves JSON SQLite versionadas `customers.v1` y `estimates.v1` sobre storage existente; operaciones de lectura/modificación/escritura serializadas dentro del proceso, recuperables tras errores. No es sincronización entre procesos ni backup remoto. Futuros esquemas requieren migración explícita.
-
-Validación: typecheck y suite actual correctos (interacciones nativas y dominio/adaptador de persistencia). Falta verificar los nuevos CRUD/UUID nativos en Android.
-
-## Feedback visual
-
-`NotificationService` en `shared/services` expone `success(message, options?)`, `warning(...)`, `danger(...)` y `dismiss()`. El componente global `nora-toast` aparece sobre las tabs, fuera del contenido desplazable. Sólo se muestra el último aviso. Success desaparece a los cinco segundos; warning/danger permanecen hasta cerrarlos. Se puede configurar `{ durationMs: 8000 }`, o cero para cierre manual. Todas las variantes incluyen botón de cierre y anuncio accesible no interruptivo. Colores basados en los tokens existentes. Las tareas y los CRUD muestran feedback de éxito/error; los servicios de dominio siguen rechazando errores para que los servicios de página puedan manejarlos y mostrar avisos sin ocultar fallos. Sin notificaciones del sistema ni permisos. Typecheck y suite actual correctos; falta verificar renderizado de toasts en Android.
-
-## Pruebas unitarias
-
-Ejecutar `npm test` desde Ubuntu/WSL. La suite tiene 195 casos correctos en veintinueve archivos, con interacciones de UI y pruebas unitarias para servicios de dominio/compartidos y flujos de página: storage local, generación de UUID, clientes, presupuestos, tareas y notificaciones. Descripciones de casos en español. Cubren errores de persistencia, actualizaciones serializadas, validaciones, estados, snapshots, cálculos y temporizadores de toasts. SQLite, Expo Crypto, Print, Sharing y FileSystem están simulados: esta suite no demuestra su ejecución nativa en el teléfono. `npm run typecheck` también correcto.
-
-## Formato
-
-Prettier usa sus valores estándar (`.prettierrc.json`), sin plugins. Ejecutar `npm run format` para formatear o `npm run format:check` para verificar. VS Code recomienda la extensión Prettier y activa formato al guardar; instalar la extensión en WSL al desarrollar ahí. Se excluyen generados, dependencias, builds nativos, cobertura, package-lock e instrucciones/planificación locales.
-
-## Flujos CRUD móviles
-
-Los componentes de página sólo enlazan signals y llaman servicios. `CustomersPageService` y `EstimatesPageService` administran lista/detalle/formulario, búsquedas, borradores, confirmaciones/Atrás nativos, cierre de teclado y notificaciones; los servicios de dominio validan y persisten. Los servicios de página viven durante la sesión de la app, por lo que cambiar de tab conserva formularios sin guardar. Volver pide confirmar antes de descartar cambios. No hay recuperación de formularios tras terminar el proceso.
-
-Formularios con direcciones múltiples e ítems de materiales/mano de obra, cantidad, unidad y precio unitario. Guardar queda fuera del scroll; adaptación al teclado y Atrás Android mediante APIs nativas oficiales. Precios admiten coma o punto decimal, hasta dos decimales y sin separadores de miles. El pipe `money` muestra centavos como `$` (ARS) o `US$` (USD), con formato argentino. Cantidades de tres decimales; parciales y totales usan las mismas reglas del dominio. Cambiar moneda no convierte precios existentes.
-
-Se puede comenzar un presupuesto antes de seleccionar cliente. Los textos incompletos y el editor separado se autoguardan localmente; revisar exige cliente, número y descripción válidos. Los borradores admiten lista de ítems vacía. Estados de presupuesto sólo para seguimiento local; compartir PDF es una acción independiente y no confirma entrega. Listas con scroll para el primer conjunto pequeño offline; se pueden virtualizar al crecer el volumen.
-
-Validación con interacciones de componentes, tests de dominio, flujo CRUD completo con storage simulado, conservación de formularios entre tabs, fuente simulada de Atrás nativo, formato monetario y conversión decimal. Export Android correcto; no se instaló ni probó el nuevo CRUD en teléfono durante esta iteración.
-
-`npm start` activa explícitamente Expo Go con túnel (`expo start --go --tunnel`), evitando depender del acceso directo a la dirección NAT de WSL desde el teléfono. Dejar el proceso corriendo y escanear el QR dentro de Expo Go. El túnel requiere internet y Expo CLI puede pedir instalar @expo/ngrok.
-
-Las páginas componen componentes de presentación reutilizables para listas, detalles, formularios y editores. Los componentes compartidos resuelven botones, campos, estructura de página y acción flotante. Signal inputs y outputs separan la presentación de los servicios de página; sus contratos tienen pruebas unitarias.
-
-Las direcciones se editan en un modal nativo reutilizable. Los cambios quedan en un borrador aislado hasta confirmar; cancelar o volver desde Android descarta ese borrador. Confirmar la dirección actualiza el formulario; guardar el cliente la persiste. Los toasts aparecen sobre las tabs inferiores.
-
-Los íconos vectoriales nativos usan @ng-native/icons con Bootstrap Icons y react-native-svg compatible con Expo. Los íconos decorativos no reciben toques. WhatsApp es un checkbox accesible junto al número de teléfono, y el botón flotante usa un ícono vectorial de suma.
-
-Los formularios incluyen ejemplos y marcan los campos obligatorios con *. El campo compartido configura autocompletado nativo de contacto y captura el fin de edición; los eventos sin texto no borran valores existentes. La vigencia usa el calendario de Android. Las fechas de calendario se guardan como yyyy-MM-dd y muestran dd/MM/yyyy mediante CalendarDatePipe, sin conversión UTC; los futuros documentos deben reutilizar este formato. Sigue pendiente reproducir el fallo de guardado del teléfono; desarrollo registra el stack original.
-
-Flujo de desarrollo: crear ramas feat/, fix/, refactor/, test/, chore/ o docs/ desde main actualizado; usar commits semánticos en español type(scope): descripción y abrir PR hacia main. dev refleja main y no debe contener trabajo independiente. CI verifica formato, tipos, unitarios y exportación del bundle Android; no genera APK ni publica. sync-dev.yml crea dev si falta, intenta fast-forward y luego merge, y usa force-with-lease sólo ante conflictos, según el estándar del workspace. Usa GITHUB_TOKEN con contents:write; DEV_SYNC_PAT opcional permite disparar workflows desde el push del bot. Con GITHUB_TOKEN ese push a dev no dispara otro CI; los de PR/main sí se ejecutan. Las reglas de ramas deben permitir la sincronización del bot. Los workflows se activan al subirlos.
-
-Estado GitHub verificado al 2026-10-09: dev remota creada desde main. main exige PR (cero aprobaciones obligatorias para el mantenimiento individual), resolución de conversaciones y aplica protección a administradores; bloquea push forzado y borrado. dev bloquea borrado y permite pushes directos/forzados para sincronizar el espejo, sin enforcement de administradores. El check de GitHub Actions «Formato, tipos, tests y bundle Android» es obligatorio en main, con la rama actualizada antes del merge.
-
-## Mi negocio
-
-El engranaje del header abre el perfil del prestador: nombre o nombre comercial obligatorio, teléfono argentino, email y logo opcionales. Se guarda localmente en SQLite bajo `business-profile.v1`; el logo se copia al directorio privado durable `business-logos` al guardar. Admite JPG, PNG y WebP de hasta 5 MB. Cancelar la selección conserva el logo anterior; reemplazarlo elimina la copia anterior sólo después de guardar correctamente. Los originales de la galería se conservan.
-
-Los componentes de contacto se comparten con clientes. Los servicios separan validación/persistencia, archivos nativos y estado de pantalla. Volver confirma cambios sin guardar y conserva la pantalla anterior. El perfil actual aporta nombre, contacto y logo opcional del prestador para generar el PDF.
-
-Validación: 158 tests en 25 archivos, typecheck y export Android correctos. Falta probar selección del logo y persistencia del perfil/logo al reiniciar Expo Go en el teléfono.
-
-## Actualizaciones del framework
-
-Seguir de cerca Angular Native es una finalidad principal de este repositorio. Actualizar sus paquetes juntos en una rama feat dedicada con el migrador oficial, revisar releases y notas de migración, y verificar tipos, tests, formato y export Android. Antes del merge, probar formularios, teclado, navegación, modales, toasts y persistencia local en el teléfono. La migración 0.7.0 → 0.13.0 sólo cambió versiones de paquetes; Expo, React Native y Angular conservan sus líneas actuales. La integración del inspector queda como otro incremento.
-
-Validación del 2026-10-14: tipos, 158 tests, formato y export Android correctos con 0.13.0. Falta la prueba de regresión en teléfono.
-
-## PDF del presupuesto y compartir
-
-Desde el detalle de un presupuesto guardado, **Compartir PDF** genera un documento A4 offline mediante `pdf-lib` y `@pdf-lib/fontkit` y abre el menú nativo de Android con `expo-sharing`. Primero completar el nombre obligatorio en Mi negocio. El documento incluye snapshot del cliente/dirección, perfil actual del negocio y logo opcional incrustado, descripción, materiales/mano de obra con cantidades/unidades, precios, parciales, total, ARS/USD, vigencia dd/MM/yyyy y notas públicas. Los borradores salen marcados BORRADOR, incluso si no tienen ítems. Los cálculos del dominio conservan el mismo redondeo en centavos de la app. Los textos se dibujan directamente en el PDF y el documento no carga recursos externos.
-
-`EstimatePdfService` resuelve assets/archivos/share locales; el generador de bytes PDF es una utilidad pura y los componentes sólo emiten acciones al servicio de página. Una copia privada con nombre único queda en `cache/estimate-pdfs` para que la app receptora termine de leerla. Nuevas exportaciones limpian las copias de más de 24 horas; el sistema puede liberar la caché antes. Esto no es backup ni archivo documental permanente. Los datos del prestador se leen al exportar; no son un snapshot histórico inmutable.
-
-Compartir no elige el contacto de WhatsApp, no confirma entrega ni cambia el estado. Elegir app/contacto y marcar como enviado son acciones separadas. Un error conserva el detalle y permite reintentar; mientras está ocupado se bloquean solicitudes repetidas.
-
-## Identidad visual y recuperación de borradores
-
-P1 petróleo + T2 Noto Sans offline + F1 precisa. Inicio/Mi negocio usa datos reales; menú desde la derecha y pestañas sólo en las tres pantallas principales. Los materiales y tareas se editan por separado, con carga repetida y cancelación aislada. `estimate-recovery.v1` conserva texto incompleto y editores interrumpidos con UUID estable y escrituras serializadas; revisar valida antes de crear/actualizar `estimates.v1`, sin debilitar sus contratos.
+- [Identidad visual](docs/visual-identity.es.md)
+- [Diseño y UX](docs/ux-guidelines.es.md)
+- [Kit visual](docs/design-kit/README.es.md)
+- [Instrucciones para colaboradores y agentes](AGENTS.md)
