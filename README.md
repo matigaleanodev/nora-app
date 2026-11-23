@@ -68,7 +68,7 @@ Entry point: `src/main.ts`; root component: `src/app/app.ts`; metadata: `app.jso
 
 For internal distribution, link the project to EAS and run `npx eas-cli build --platform android --profile preview`. EAS manages Android signing. Keep the `dev.matiasgaleano.nora` package and the same signing key across updates, and increase `android.versionCode` for each distributed version.
 
-For a local test build, use Node 24, JDK 21 and an Android SDK with API 36, Build Tools 36.0.0, NDK 27.1.12297006 and CMake 3.22.1. Set `JAVA_HOME` and `ANDROID_HOME`, then run:
+For a local test build, use Node 24, JDK 21 and an Android SDK with API 36, Build Tools 36.0.0, NDK 27.1.12297006 and 27.0.12077973, and CMake 3.22.1. Nora builds SQLite from source to include its native library for both APK architectures. Set `JAVA_HOME` and `ANDROID_HOME`, then run:
 
 ```bash
 npm ci
@@ -79,6 +79,8 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
 In PowerShell, use `.\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,x86_64'`. The local APK uses the generated Expo project's test signing key. For distribution, use the `preview` profile or sign the APK with a private key you can retain for updates. The APK contains Nora's code and assets and runs independently of Metro and Expo Go.
+
+Use `jar tf app/build/outputs/apk/release/app-release.apk` to verify that it includes `lib/arm64-v8a/libexpo-sqlite.so` and `lib/x86_64/libexpo-sqlite.so`.
 
 1. Install the APK and open **Mi negocio** from Home to save your name, optional contact information and logo.
 2. Add a customer and their addresses. In **Presupuestos**, add materials and labor, review the draft and share the PDF. Change the estimate status manually.

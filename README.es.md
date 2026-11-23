@@ -68,7 +68,7 @@ Punto de entrada: `src/main.ts`; componente raíz: `src/app/app.ts`; metadatos: 
 
 Para distribución interna, vinculá el proyecto a EAS y ejecutá `npx eas-cli build --platform android --profile preview`. EAS administra la firma de Android. Conservá el paquete `dev.matiasgaleano.nora` y la misma clave al actualizar, y aumentá `android.versionCode` para cada versión que distribuyas.
 
-Para una compilación local de prueba, usá Node 24, JDK 21 y un Android SDK con API 36, Build Tools 36.0.0, NDK 27.1.12297006 y CMake 3.22.1. Configurá `JAVA_HOME` y `ANDROID_HOME` y ejecutá:
+Para una compilación local de prueba, usá Node 24, JDK 21 y un Android SDK con API 36, Build Tools 36.0.0, NDK 27.1.12297006 y 27.0.12077973, y CMake 3.22.1. Nora compila SQLite desde fuente para incluir su biblioteca nativa en las dos arquitecturas del APK. Configurá `JAVA_HOME` y `ANDROID_HOME` y ejecutá:
 
 ```bash
 npm ci
@@ -79,6 +79,8 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
 En PowerShell, usá `.\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,x86_64'`. El APK local usa la firma de prueba del proyecto generado por Expo. Para distribuirlo, usá el perfil `preview` o firmalo con una clave privada que puedas conservar para las actualizaciones. El APK incluye el código y los recursos de Nora y funciona sin Metro ni Expo Go.
+
+Verificá con `jar tf app/build/outputs/apk/release/app-release.apk` que figuren `lib/arm64-v8a/libexpo-sqlite.so` y `lib/x86_64/libexpo-sqlite.so`.
 
 1. Instalá el APK y abrí **Mi negocio** desde Inicio para guardar tu nombre y, si querés, tus datos de contacto y logo.
 2. Registrá un cliente y sus direcciones. Desde **Presupuestos**, cargá materiales y mano de obra, revisá el borrador y compartí el PDF. El estado se cambia manualmente.

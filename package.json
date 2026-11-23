@@ -56,5 +56,14 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check"
   },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-sqlite"
+        ]
+      }
+    }
+  },
   "private": true
 }
