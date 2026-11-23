@@ -13,7 +13,7 @@ import type { Customer } from "../models/customer.model";
       (valueChange)="searchChange.emit($event)"
       placeholder="Ej.: Ana o 4123456"
     />
-    <view class="flex-row gap-2">
+    <view class="flex-row flex-wrap gap-2">
       <nora-button
         variant="choice"
         text="Activos"
@@ -61,7 +61,7 @@ import type { Customer } from "../models/customer.model";
         <view class="task-card rounded-lg p-6 gap-2"
           ><text class="section-title">Todavía no hay clientes acá.</text
           ><text class="muted"
-            >Usá + para agregar uno o probá otra búsqueda.</text
+            >Usá «Nuevo cliente» para agregar uno o probá otra búsqueda.</text
           ></view
         >
       }

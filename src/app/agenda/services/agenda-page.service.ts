@@ -70,6 +70,7 @@ export class AgendaPageService {
   private readonly screenState = signal<Screen>("list");
   private readonly records = signal<readonly Visit[]>([]);
   private readonly customers = signal<readonly Customer[]>([]);
+  private readonly readingCustomers = signal(false);
   private readonly formState = signal<VisitForm>(emptyForm(""));
   private readonly baseline = signal("");
   private readonly editingId = signal<string | null>(null);
@@ -77,14 +78,17 @@ export class AgendaPageService {
   private inflight: Promise<void> | null = null;
   private readonly working = signal(false);
   private readonly errorState = signal("");
+  private readonly loadErrorState = signal("");
   private readonly day = signal(calendarDateFromLocal(new Date()));
   readonly visible = this.shown.asReadonly();
   readonly screen = this.screenState.asReadonly();
   readonly form = this.formState.asReadonly();
   readonly today = this.day.asReadonly();
   readonly loading = this.reading.asReadonly();
+  readonly customerLoading = this.readingCustomers.asReadonly();
   readonly busy = this.working.asReadonly();
   readonly error = this.errorState.asReadonly();
+  readonly loadError = this.loadErrorState.asReadonly();
   readonly editing = computed(() => this.editingId() !== null);
   readonly search = signal("");
   readonly showDone = signal(false);
@@ -145,11 +149,10 @@ export class AgendaPageService {
     await this.load();
     // La carga es asíncrona: si mientras tanto se abrió otro formulario con cambios, no se pisa sin confirmar.
     if (!(await this.confirmDiscard())) return false;
+    if (this.loadError()) return true;
     const visit = this.records().find((value) => value.id === id);
     if (visit) this.edit(visit);
-    // Si la carga falló la agenda ya muestra su error: no se puede afirmar que la visita no exista.
-    else if (!this.error())
-      this.notifications.warning("Esa visita ya no está en tu agenda.");
+    else this.notifications.warning("Esa visita ya no está en tu agenda.");
     return true;
   }
   /** Carga la agenda; si ya hay una lectura en curso comparte su resultado en vez de omitirla. */
@@ -161,13 +164,16 @@ export class AgendaPageService {
   }
   private async read(): Promise<void> {
     this.reading.set(true);
+    this.loadErrorState.set("");
     this.errorState.set("");
     try {
       this.day.set(calendarDateFromLocal(new Date()));
       await this.reminders.reconcile();
       this.records.set(await this.visits.getAll());
     } catch {
-      this.errorState.set("No pudimos cargar tu agenda. Volvé a intentarlo.");
+      const message = "No pudimos cargar tu agenda. Volvé a intentarlo.";
+      this.loadErrorState.set(message);
+      if (this.screen() === "list") this.errorState.set(message);
     } finally {
       this.reading.set(false);
     }
@@ -191,6 +197,7 @@ export class AgendaPageService {
     void this.loadCustomers();
   }
   pickCustomer(customer: Customer | null): void {
+    if (this.screen() === "customer") this.keyboard.dismiss();
     this.update(
       customer
         ? { customerId: customer.id, customerName: customer.name }
@@ -199,7 +206,7 @@ export class AgendaPageService {
     this.screenState.set("form");
   }
   async save(): Promise<void> {
-    if (this.busy()) return;
+    if (this.busy() || this.screen() !== "form") return;
     this.working.set(true);
     this.errorState.set("");
     try {
@@ -208,11 +215,11 @@ export class AgendaPageService {
       const saved = id
         ? await this.visits.update(id, input)
         : await this.visits.create(input);
-      await this.reschedule(saved);
-      this.records.set(await this.visits.getAll());
+      this.storeVisit(saved);
       this.keyboard.dismiss();
       this.screenState.set("list");
-      this.notifications.success("Visita guardada.");
+      if (await this.reschedule(saved))
+        this.notifications.success("Visita guardada.");
     } catch (error) {
       this.fail(error, "No pudimos guardar la visita.");
     } finally {
@@ -228,8 +235,8 @@ export class AgendaPageService {
         visit.id,
         done ? VisitStatus.Done : VisitStatus.Pending,
       );
+      this.storeVisit(saved);
       await this.reschedule(saved);
-      this.records.set(await this.visits.getAll());
     } catch (error) {
       this.fail(error, "No pudimos actualizar la visita.");
     } finally {
@@ -252,8 +259,10 @@ export class AgendaPageService {
       )
         return;
       await this.visits.remove(visit.id);
+      this.records.update((records) =>
+        records.filter((value) => value.id !== visit.id),
+      );
       await this.reminders.cancel(visit.id);
-      this.records.set(await this.visits.getAll());
       this.screenState.set("list");
       this.notifications.success("Visita eliminada.");
     } catch (error) {
@@ -265,6 +274,8 @@ export class AgendaPageService {
   async back(): Promise<void> {
     if (this.busy() || this.loading()) return;
     if (this.screen() === "customer") {
+      this.keyboard.dismiss();
+      this.errorState.set("");
       this.screenState.set("form");
       return;
     }
@@ -319,30 +330,50 @@ export class AgendaPageService {
     this.errorState.set("");
     this.screenState.set("form");
   }
-  private async loadCustomers(): Promise<void> {
+  async loadCustomers(): Promise<void> {
+    if (this.customerLoading()) return;
+    this.readingCustomers.set(true);
+    this.errorState.set("");
     try {
       this.customers.set(await this.customerService.getAll());
     } catch {
-      this.errorState.set("No pudimos cargar los clientes.");
+      if (this.screen() === "customer")
+        this.errorState.set("No pudimos cargar los clientes.");
+    } finally {
+      this.readingCustomers.set(false);
     }
   }
+  private storeVisit(saved: Visit): void {
+    this.records.update((records) =>
+      records.some((visit) => visit.id === saved.id)
+        ? records.map((visit) => (visit.id === saved.id ? saved : visit))
+        : [...records, saved],
+    );
+  }
   /** Deja el aviso acorde a la visita; si falla, la visita queda guardada y se avisa al usuario. */
-  private async reschedule(visit: Visit): Promise<void> {
+  private async reschedule(visit: Visit): Promise<boolean> {
     try {
       const result = await this.reminders.schedule(visit);
       const marker = result.id ?? null;
-      if (marker !== (visit.reminderId ?? null))
-        await this.visits.setReminders({ [visit.id]: marker });
+      const { reminderId: previous, ...record } = visit;
+      if (marker !== (previous ?? null)) {
+        await this.visits.setReminders({ [visit.id]: marker }).catch(() => {});
+        this.storeVisit(marker ? { ...record, reminderId: marker } : record);
+      }
       if (result.denied)
         this.notifications.warning(
           "Guardamos la visita, pero no podemos avisarte: las notificaciones de Nora están desactivadas.",
         );
+      return !result.denied;
     } catch {
       // El aviso anterior ya se quitó: la marca guardada dejó de ser cierta y la próxima conciliación reintenta.
       await this.visits.setReminders({ [visit.id]: null }).catch(() => {});
+      const { reminderId: _previous, ...record } = visit;
+      this.storeVisit(record);
       this.notifications.warning(
         "Guardamos la visita, pero no pudimos programar el aviso.",
       );
+      return false;
     }
   }
   private fail(error: unknown, fallback: string): void {

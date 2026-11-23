@@ -83,6 +83,7 @@ import {
         <nora-address-editor
           [address]="draft.address"
           [index]="draft.index ?? form().addresses.length"
+          [removable]="draft.index !== null"
           (changed)="editor.update($event)"
           (removed)="removeAddress()"
         />
@@ -111,10 +112,8 @@ export class CustomersFormComponent {
     else
       this.addressChanged.emit({ index: draft.index, changes: draft.address });
   }
-  protected removeAddress(): void {
-    const draft = this.editor.draft();
-    if (draft?.index !== null && draft?.index !== undefined)
-      this.addressRemoved.emit(draft.index);
-    this.editor.cancel();
+  protected async removeAddress(): Promise<void> {
+    const index = await this.editor.remove();
+    if (index !== null) this.addressRemoved.emit(index);
   }
 }

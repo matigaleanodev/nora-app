@@ -26,6 +26,7 @@ import {
   Pressable,
   SafeAreaProvider,
   SafeAreaView,
+  ScrollView,
   Text,
   View,
 } from "@ng-native/components";
@@ -52,6 +53,7 @@ type Tab = "customers" | "home" | "estimates";
     PageLayoutComponent,
     SafeAreaProvider,
     SafeAreaView,
+    ScrollView,
     Text,
     View,
     HomeComponent,
@@ -168,32 +170,34 @@ type Tab = "customers" | "home" | "estimates";
                     ><nora-icon name="bootstrapXLg"
                   /></pressable>
                 </view>
-                <text class="section-title">Nora</text
-                ><text class="muted">Un poco de orden para tu trabajo.</text>
-                <nora-navigation-row
-                  text="Datos del negocio"
-                  detail="Nombre, contacto y logo"
-                  (pressed)="openBusiness()"
-                />
-                <nora-navigation-row
-                  text="Agenda"
-                  detail="Visitas y seguimientos con aviso"
-                  (pressed)="openAgenda()"
-                />
-                <nora-navigation-row
-                  text="Copia de seguridad"
-                  detail="Guardar y restaurar tus datos"
-                  (pressed)="openInformation('backup')"
-                />
-                <nora-navigation-row
-                  text="Ayuda"
-                  detail="Uso y guardado local"
-                  (pressed)="openInformation('help')"
-                />
-                <nora-navigation-row
-                  text="Acerca de Nora"
-                  (pressed)="openInformation('about')"
-                />
+                <scroll-view class="flex-1" contentContainerClass="gap-4">
+                  <text class="section-title">Nora</text>
+                  <text class="muted">Un poco de orden para tu trabajo.</text>
+                  <nora-navigation-row
+                    text="Datos del negocio"
+                    detail="Nombre, contacto y logo"
+                    (pressed)="openBusiness()"
+                  />
+                  <nora-navigation-row
+                    text="Agenda"
+                    detail="Visitas y seguimientos con aviso"
+                    (pressed)="openAgenda()"
+                  />
+                  <nora-navigation-row
+                    text="Copia de seguridad"
+                    detail="Guardar y restaurar tus datos"
+                    (pressed)="openInformation('backup')"
+                  />
+                  <nora-navigation-row
+                    text="Ayuda"
+                    detail="Uso y guardado local"
+                    (pressed)="openInformation('help')"
+                  />
+                  <nora-navigation-row
+                    text="Acerca de Nora"
+                    (pressed)="openInformation('about')"
+                  />
+                </scroll-view>
               </safe-area-view>
             </view>
           }

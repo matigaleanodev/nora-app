@@ -161,6 +161,37 @@ describe("VisitRemindersService", () => {
     expect(ids()).toEqual([]);
   });
 
+  test("crea el canal de Android antes de pedir el primer permiso", async () => {
+    vi.mocked(notifications.getPermissionsAsync).mockResolvedValue({
+      granted: false,
+      canAskAgain: true,
+    } as never);
+    await setup().schedule(visit());
+    expect(notifications.setNotificationChannelAsync).toHaveBeenCalledBefore(
+      vi.mocked(notifications.requestPermissionsAsync),
+    );
+  });
+
+  test("consume el aviso de arranque una sola vez aunque también llegue al listener", async () => {
+    const response = {
+      notification: { date: 123, request: stale(visit().id) },
+    } as unknown as notifications.NotificationResponse;
+    vi.mocked(notifications.getLastNotificationResponse).mockReturnValueOnce(
+      response,
+    );
+    const show = vi.fn();
+    const stop = await setup().onOpen(show);
+    const [listener] = vi.mocked(
+      notifications.addNotificationResponseReceivedListener,
+    ).mock.calls[0]!;
+    listener(response);
+    expect(show).toHaveBeenCalledExactlyOnceWith(visit().id);
+    expect(notifications.clearLastNotificationResponse).toHaveBeenCalledTimes(
+      1,
+    );
+    stop();
+  });
+
   test("reconcilia sin pedir permisos: reprograma lo faltante, guarda la marca y limpia huérfanos", async () => {
     const missing = visit();
     const finished = other({ status: VisitStatus.Done, reminderId: "viejo" });

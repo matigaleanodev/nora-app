@@ -98,6 +98,25 @@ test("avisa si las notificaciones están desactivadas pero guarda la visita", as
   expect(notifications.warning).toHaveBeenCalledWith(
     expect.stringContaining("notificaciones"),
   );
+  expect(notifications.success).not.toHaveBeenCalled();
+});
+
+test("confirma el alta una sola vez aunque una lectura posterior no esté disponible", async () => {
+  const service = setup();
+  const created = visit({ id: OTRA, title: "Presupuestar" });
+  visits.create.mockResolvedValue(created);
+  await service.open();
+  visits.getAll.mockRejectedValue(new Error("disco"));
+  service.create({ title: created.title });
+  await service.save();
+  expect(service.screen()).toBe("list");
+  expect(service.sections().flatMap(({ items }) => items)).toContainEqual(
+    expect.objectContaining({ id: created.id, title: created.title }),
+  );
+  await service.save();
+  expect(visits.getAll).toHaveBeenCalledTimes(1);
+  expect(visits.create).toHaveBeenCalledTimes(1);
+  expect(notifications.danger).not.toHaveBeenCalled();
 });
 
 test("un error de validación conserva el formulario", async () => {

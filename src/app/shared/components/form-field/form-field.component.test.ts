@@ -48,9 +48,21 @@ test("captura el email autocompletado al terminar de editar sin depender del tip
 test("un evento de fin de edición sin texto no borra un valor existente", async () => {
   const valueChange = vi.fn();
   await render(FormFieldComponent, {
-    inputs: { label: "Email", value: "ana@gmail.com" },
+    inputs: { label: "Email", value: "ana@gmail.com", autoComplete: "email" },
     on: { valueChange },
   });
   await fireEvent(screen.getByLabelText("Email"), "endEditing", {});
+  expect(valueChange).not.toHaveBeenCalled();
+});
+
+test("un fin de edición atrasado no devuelve el precio anterior al editor limpio", async () => {
+  const valueChange = vi.fn();
+  await render(FormFieldComponent, {
+    inputs: { label: "Precio", value: "", keyboard: "decimal-pad" },
+    on: { valueChange },
+  });
+  await fireEvent(screen.getByLabelText("Precio"), "endEditing", {
+    text: "10,25",
+  });
   expect(valueChange).not.toHaveBeenCalled();
 });

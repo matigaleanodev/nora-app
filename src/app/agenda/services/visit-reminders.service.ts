@@ -54,7 +54,7 @@ type Notifications = typeof import("expo-notifications");
 @Injectable({ providedIn: "root" })
 export class VisitRemindersService {
   private readonly visits = inject(VisitsService);
-  private opened = false;
+  private lastOpened?: string;
   private tail: Promise<unknown> = Promise.resolve();
 
   /**
@@ -68,12 +68,18 @@ export class VisitRemindersService {
         await this.drop(notifications, visit.id);
         return {};
       }
-      if (!(await this.permitted(notifications, ask))) {
-        // Sin permiso no hay aviso nuevo, y uno anterior con otra hora ya no es válido.
+      try {
+        await this.ensureChannel(notifications);
+        if (!(await this.permitted(notifications, ask))) {
+          // Sin permiso no hay aviso nuevo, y uno anterior con otra hora ya no es válido.
+          await this.drop(notifications, visit.id);
+          return { denied: true };
+        }
+        await this.place(notifications, visit);
+      } catch (error) {
         await this.drop(notifications, visit.id);
-        return { denied: true };
+        throw error;
       }
-      await this.replace(notifications, visit);
       return { id: visit.id };
     });
   }
@@ -112,6 +118,7 @@ export class VisitRemindersService {
       try {
         const notifications = await import("expo-notifications");
         if (!(await this.permitted(notifications, false))) return;
+        await this.ensureChannel(notifications);
         const visits = await this.visits.getAll();
         const active = new Map(
           (await notifications.getAllScheduledNotificationsAsync()).map(
@@ -155,27 +162,31 @@ export class VisitRemindersService {
       handleNotification: async () => ({
         shouldShowBanner: true,
         shouldShowList: true,
-        shouldPlaySound: false,
+        shouldPlaySound: true,
         shouldSetBadge: false,
       }),
     });
-    const open = (response: {
-      notification: { request: { content: { data?: unknown } } };
-    }): void => {
-      const data = response.notification.request.content.data as Record<
-        string,
-        unknown
-      > | null;
-      const id = data?.["visitId"];
-      if (typeof id === "string") handler(id);
+    const open = (
+      response: import("expo-notifications").NotificationResponse,
+    ): void => {
+      const { date, request } = response.notification;
+      const id = request.content.data?.["visitId"];
+      if (typeof id !== "string") return;
+      const key = request.identifier && `${request.identifier}:${date}`;
+      if (key && key === this.lastOpened) return;
+      this.lastOpened = key;
+      notifications.clearLastNotificationResponse();
+      handler(id);
     };
-    if (!this.opened) {
-      this.opened = true;
-      const launch = await notifications.getLastNotificationResponseAsync();
-      if (launch) open(launch);
-    }
     const subscription =
       notifications.addNotificationResponseReceivedListener(open);
+    try {
+      const launch = notifications.getLastNotificationResponse();
+      if (launch) open(launch);
+    } catch (error) {
+      subscription.remove();
+      throw error;
+    }
     return () => subscription.remove();
   }
 
@@ -224,7 +235,6 @@ export class VisitRemindersService {
     notifications: Notifications,
     visit: Visit,
   ): Promise<void> {
-    await this.ensureChannel(notifications);
     await notifications.scheduleNotificationAsync({
       identifier: visit.id,
       content: {
@@ -266,13 +276,9 @@ export class VisitRemindersService {
   }
 
   private async ensureChannel(notifications: Notifications): Promise<void> {
-    try {
-      await notifications.setNotificationChannelAsync(CHANNEL, {
-        name: "Agenda",
-        importance: notifications.AndroidImportance.DEFAULT,
-      });
-    } catch {
-      /* iOS no usa canales; en Android un fallo deja el canal predeterminado. */
-    }
+    await notifications.setNotificationChannelAsync(CHANNEL, {
+      name: "Agenda",
+      importance: notifications.AndroidImportance.DEFAULT,
+    });
   }
 }

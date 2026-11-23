@@ -22,7 +22,7 @@ import {
         [accessibilityLabel]="label()"
         [value]="value()"
         (changeText)="commit($event)"
-        (endEditing)="commit($event)"
+        (endEditing)="commitAutofill($event)"
         [autoComplete]="autoComplete()"
         [importantForAutofill]="autoComplete() === 'off' ? 'no' : 'yes'"
         [autoCorrect]="false"
@@ -48,6 +48,10 @@ export class FormFieldComponent {
   readonly valueChange = output<string>();
   protected commit(event: unknown): void {
     const value = readNativeText(event);
-    if (value !== null) this.valueChange.emit(value);
+    if (value !== null && value !== this.value()) this.valueChange.emit(value);
+  }
+  protected commitAutofill(event: unknown): void {
+    // Un fin de edición tardío no debe reponer el texto tras limpiar el editor.
+    if (this.autoComplete() !== "off") this.commit(event);
   }
 }

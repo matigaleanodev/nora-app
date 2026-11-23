@@ -1,4 +1,5 @@
-import { Injectable, signal } from "@angular/core";
+import { inject, Injectable, signal } from "@angular/core";
+import { Dialogs } from "@ng-native/device";
 import type { CustomerInput } from "../models/customer.model";
 type Address = CustomerInput["addresses"][number];
 export interface AddressDraft {
@@ -12,6 +13,7 @@ export interface AddressDraft {
  */
 @Injectable({ providedIn: "root" })
 export class AddressEditorService {
+  private readonly dialogs = inject(Dialogs);
   private readonly state = signal<AddressDraft | null>(null);
   private readonly errorState = signal("");
   readonly draft = this.state.asReadonly();
@@ -42,6 +44,19 @@ export class AddressEditorService {
   cancel(): void {
     this.state.set(null);
     this.errorState.set("");
+  }
+  async remove(): Promise<number | null> {
+    const draft = this.draft();
+    if (!draft || draft.index === null) return null;
+    const confirmed = await this.dialogs.confirm("¿Quitar dirección?", {
+      message: "Se quitará de este cliente al guardar los cambios.",
+      confirm: "Quitar",
+      cancel: "Conservar",
+      destructive: true,
+    });
+    if (!confirmed || this.draft()?.index !== draft.index) return null;
+    this.cancel();
+    return draft.index;
   }
   confirm(): AddressDraft | null {
     const draft = this.draft();

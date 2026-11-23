@@ -1,9 +1,17 @@
 import { expect, test } from "vitest";
+import { Dialogs } from "@ng-native/device";
+import { injectService } from "@ng-native/testing";
 import { AddressEditorService } from "./address-editor.service";
 import { customerFixture } from "../../shared/testing/domain-fixtures";
 
+function setup() {
+  return injectService(AddressEditorService, {
+    providers: [{ provide: Dialogs, useValue: { confirm: async () => false } }],
+  });
+}
+
 test("cancelar conserva la dirección original sin aplicar el borrador", () => {
-  const service = new AddressEditorService();
+  const service = setup();
   const original = customerFixture.addresses[0];
   service.open(original, 0);
   service.update({ name: "Otro lugar" });
@@ -12,7 +20,7 @@ test("cancelar conserva la dirección original sin aplicar el borrador", () => {
   expect(service.draft()).toBeNull();
 });
 test("confirmar una edición conserva UUID e índice y aplica los cambios", () => {
-  const service = new AddressEditorService();
+  const service = setup();
   const original = customerFixture.addresses[0];
   service.open(original, 2);
   service.update({ streetNumber: "456" });
@@ -23,7 +31,7 @@ test("confirmar una edición conserva UUID e índice y aplica los cambios", () =
   expect(service.draft()).toBeNull();
 });
 test("rechaza una dirección sin nombre y permite corregirla sin perder campos", () => {
-  const service = new AddressEditorService();
+  const service = setup();
   service.open();
   service.update({ street: "San Martín" });
   expect(service.confirm()).toBeNull();
