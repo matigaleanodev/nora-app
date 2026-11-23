@@ -10,6 +10,10 @@ import { EstimatesListComponent } from "../components/estimates-list.component";
 import { EstimatesDetailComponent } from "../components/estimates-detail.component";
 import { EstimatesFormComponent } from "../components/estimates-form.component";
 import { EstimatesCustomerPickerComponent } from "../components/estimates-customer-picker.component";
+import {
+  calendarDateFromLocal,
+  formatCalendarDate,
+} from "../../shared/utils/calendar-date";
 @Component({
   selector: "nora-estimates",
   imports: [
@@ -41,6 +45,7 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
             [statusFilter]="vm.statusFilter()"
             (statusFilterChange)="vm.statusFilter.set($event)"
             [rows]="vm.listRows()"
+            [hasRecoveries]="vm.visibleRecoveries().length > 0"
             [statusLabels]="vm.statusLabels"
             [loading]="vm.loading()"
             [error]="vm.error()"
@@ -49,7 +54,12 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
             (searchChange)="vm.search.set($event)"
             (retry)="vm.enter()"
           />
-          @for (recovery of vm.visibleRecoveries(); track recovery.id) {
+          @for (
+            recovery of vm.loading() || vm.error()
+              ? []
+              : vm.visibleRecoveries();
+            track recovery.id
+          ) {
             <view class="compact-row gap-2">
               <text class="body-text">{{
                 recovery.form.number || "Presupuesto sin completar"
@@ -58,7 +68,7 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
                 >{{
                   recovery.form.description || "Faltan datos para revisar"
                 }}
-                · {{ recovery.updatedAt }}</text
+                · {{ formatRecoveryDate(recovery.updatedAt) }}</text
               >
               <nora-button
                 text="Continuar edición"
@@ -239,6 +249,9 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
 export class EstimatesPageComponent {
   protected readonly vm = inject(EstimatesPageService);
   private readonly layout = viewChild(PageLayoutComponent);
+  protected formatRecoveryDate(instant: string): string {
+    return formatCalendarDate(calendarDateFromLocal(new Date(instant)));
+  }
   protected confirmAndAddAnother(): void {
     const count = this.vm.form().items.length;
     this.vm.confirmItem(true);

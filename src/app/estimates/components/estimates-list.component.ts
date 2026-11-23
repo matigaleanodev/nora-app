@@ -64,13 +64,21 @@ import type { Estimate, EstimateStatus } from "../models/estimate.model";
           >
         </pressable>
       } @empty {
-        <view class="task-card rounded-lg p-6 gap-2"
-          ><text class="section-title">Tus próximos trabajos empiezan acá.</text
-          ><text class="muted"
-            >Usá «Nuevo presupuesto» para empezar. Podés completar los datos
-            después.</text
-          ></view
-        >
+        @if (!hasRecoveries()) {
+          @if (search().trim() || statusFilter() !== "all") {
+            <text class="muted">No hay presupuestos que coincidan.</text>
+          } @else {
+            <view class="task-card rounded-lg p-6 gap-2">
+              <text class="section-title"
+                >Tus próximos trabajos empiezan acá.</text
+              >
+              <text class="muted"
+                >Usá «Nuevo presupuesto» para empezar. Podés completar los datos
+                después.</text
+              >
+            </view>
+          }
+        }
       }
     }
   </view>`,
@@ -84,6 +92,7 @@ export class EstimatesListComponent {
     { value: "sent", label: "Enviados" },
   ] as const;
   readonly rows = input.required<readonly EstimateListRow[]>();
+  readonly hasRecoveries = input(false);
   readonly statusLabels = input.required<Record<EstimateStatus, string>>();
   readonly loading = input(false);
   readonly error = input("");

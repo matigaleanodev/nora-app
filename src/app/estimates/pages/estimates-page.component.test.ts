@@ -1,4 +1,7 @@
-import { EstimateRecoveryService } from "../services/estimate-recovery.service";
+import {
+  EstimateRecoveryService,
+  type EstimateRecovery,
+} from "../services/estimate-recovery.service";
 import { IdService } from "../../shared/services/id.service";
 import { render, screen, userEvent, fireEvent } from "@ng-native/testing";
 import { Dialogs } from "@ng-native/device";
@@ -22,6 +25,7 @@ import {
 async function setup(
   record: Estimate | null = estimateFixture,
   hasCustomers = true,
+  recoveries: readonly EstimateRecovery[] = [],
 ) {
   const estimates = {
     getAll: vi.fn().mockResolvedValue(record ? [record] : []),
@@ -47,7 +51,7 @@ async function setup(
       {
         provide: EstimateRecoveryService,
         useValue: {
-          getAll: async () => [],
+          getAll: async () => recoveries,
           save: async () => undefined,
           remove: async () => undefined,
         },
@@ -73,6 +77,30 @@ async function setup(
     user: userEvent.setup(),
   };
 }
+
+test("un borrador recuperable muestra su fecha local y reemplaza el estado vacío", async () => {
+  await setup(null, true, [
+    {
+      id: "00000000-0000-4000-8000-000000000099",
+      estimateId: null,
+      updatedAt: new Date(2026, 10, 22, 12).toISOString(),
+      editor: null,
+      form: {
+        number: "N-001",
+        clientId: "",
+        addressId: "",
+        currency: Currency.ARS,
+        description: "",
+        validUntil: "",
+        notes: "",
+        items: [],
+      },
+    },
+  ]);
+  expect(screen.queryByText(/Tus próximos trabajos/)).toBeNull();
+  expect(screen.getByText(/22\/11\/2026/)).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Continuar N-001" })).toBeTruthy();
+});
 
 test("las condiciones se editan en una pantalla propia y volver conserva el borrador", async () => {
   const { user, vm, result } = await setup();
