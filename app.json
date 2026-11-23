@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "android": {
       "package": "dev.matiasgaleano.nora",
-      "versionCode": 2,
+      "versionCode": 3,
       "allowBackup": false,
       "softwareKeyboardLayoutMode": "resize",
       "blockedPermissions": [
