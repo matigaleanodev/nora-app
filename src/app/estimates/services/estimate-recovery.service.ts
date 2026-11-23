@@ -50,7 +50,7 @@ export function isEstimateRecovery(value: unknown): value is EstimateRecovery {
     return false;
   try {
     assertUuid(value["id"]);
-    if (value["estimateId"]) assertUuid(value["estimateId"] as string);
+    if (value["estimateId"] !== null) assertUuid(value["estimateId"] as string);
   } catch {
     return false;
   }
@@ -81,35 +81,51 @@ export function isEstimateRecovery(value: unknown): value is EstimateRecovery {
           (editor["index"] as number) < form["items"].length)))
   );
 }
+
+export function readEstimateRecoveries(
+  value: unknown,
+): readonly EstimateRecovery[] {
+  if (value === null) return [];
+  if (!Array.isArray(value) || !value.every(isEstimateRecovery))
+    throw new Error(
+      "No pudimos leer las ediciones guardadas. Los datos originales se conservaron.",
+    );
+  return value;
+}
+
 /** Conserva texto transitorio separado del documento validado y de sus snapshots. */
 @Injectable({ providedIn: "root" })
 export class EstimateRecoveryService {
   private readonly storage = inject(LocalStorageService);
   async getAll(): Promise<readonly EstimateRecovery[]> {
-    return this.read(await this.storage.read<unknown>(KEY));
+    return readEstimateRecoveries(await this.storage.read<unknown>(KEY));
   }
   save(value: EstimateRecovery): Promise<void> {
     if (!isEstimateRecovery(value))
       return Promise.reject(
         new Error("No pudimos conservar esta edición. Revisá los datos."),
       );
-    const snapshot = structuredClone(value);
+    const snapshot: EstimateRecovery = {
+      ...value,
+      form: {
+        ...value.form,
+        items: value.form.items.map((entry) => ({ ...entry })),
+      },
+      editor: value.editor && {
+        ...value.editor,
+        item: { ...value.editor.item },
+      },
+    };
     return this.storage.update<unknown>(KEY, (current) => [
-      ...this.read(current).filter((record) => record.id !== snapshot.id),
+      ...readEstimateRecoveries(current).filter(
+        (record) => record.id !== snapshot.id,
+      ),
       snapshot,
     ]);
   }
   remove(id: string): Promise<void> {
     return this.storage.update<unknown>(KEY, (current) =>
-      this.read(current).filter((record) => record.id !== id),
+      readEstimateRecoveries(current).filter((record) => record.id !== id),
     );
-  }
-  private read(value: unknown): readonly EstimateRecovery[] {
-    if (value === null) return [];
-    if (!Array.isArray(value) || !value.every(isEstimateRecovery))
-      throw new Error(
-        "No pudimos leer las ediciones guardadas. Los datos originales se conservaron.",
-      );
-    return value;
   }
 }

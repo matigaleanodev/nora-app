@@ -6,7 +6,7 @@ import type { EstimateItemInput } from "../models/estimate.model";
 export function calculateItemSubtotal(item: EstimateItemInput): number {
   if (
     !Number.isFinite(item.quantity) ||
-    item.quantity <= 0 ||
+    item.quantity < 0.001 ||
     item.quantity > 1_000_000 ||
     !Number.isSafeInteger(item.unitPriceCents) ||
     item.unitPriceCents < 0

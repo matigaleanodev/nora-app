@@ -219,6 +219,7 @@ test("editar conserva los identificadores de ítems y delega la actualización",
         }),
       ],
     }),
+    "00000000-0000-4000-8000-000000000099",
   );
 });
 test("rechaza importes ambiguos y cancelar conserva el material anterior", async () => {

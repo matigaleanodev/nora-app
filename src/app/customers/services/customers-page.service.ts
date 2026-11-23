@@ -106,6 +106,15 @@ export class CustomersPageService {
       this.loadState.set(false);
     }
   }
+  reloadAfterRestore(): Promise<void> {
+    this.selectedId.set(null);
+    this.search.set("");
+    this.showArchived.set(false);
+    this.startForm(emptyForm());
+    this.screenState.set("list");
+    this.records.set([]);
+    return this.enter();
+  }
   open(customer: Customer): void {
     this.selectedId.set(customer.id);
     this.screenState.set("detail");

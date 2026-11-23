@@ -15,12 +15,17 @@ import {
 } from "./backup-page.service";
 import { BackupService } from "./backup.service";
 
-const backups = { share: vi.fn(), pick: vi.fn(), restore: vi.fn() };
+const backups = {
+  share: vi.fn(),
+  saveToFolder: vi.fn(),
+  pick: vi.fn(),
+  restore: vi.fn(),
+};
 const notifications = { success: vi.fn(), danger: vi.fn() };
 const dialogs = { confirm: vi.fn() };
 const shell = { information: signal<"backup" | null>("backup") };
-const customers = { enter: vi.fn() };
-const estimates = { enter: vi.fn() };
+const customers = { reloadAfterRestore: vi.fn() };
+const estimates = { reloadAfterRestore: vi.fn(), flushRecovery: vi.fn() };
 const backup = buildBackup(
   { "customers.v1": [customerFixture] },
   undefined,
@@ -52,8 +57,9 @@ beforeEach(() => {
   backups.pick.mockResolvedValue(backup);
   backups.restore.mockResolvedValue(undefined);
   dialogs.confirm.mockResolvedValue(true);
-  customers.enter.mockResolvedValue(undefined);
-  estimates.enter.mockResolvedValue(undefined);
+  customers.reloadAfterRestore.mockResolvedValue(undefined);
+  estimates.reloadAfterRestore.mockResolvedValue(undefined);
+  estimates.flushRecovery.mockResolvedValue(true);
 });
 
 test("describe la copia con singulares y plurales", () => {
@@ -82,8 +88,8 @@ test("restaura sólo después de confirmar y vuelve a leer los datos de las pant
     expect.objectContaining({ destructive: true, confirm: "Reemplazar" }),
   );
   expect(backups.restore).toHaveBeenCalledWith(backup);
-  expect(customers.enter).toHaveBeenCalled();
-  expect(estimates.enter).toHaveBeenCalled();
+  expect(customers.reloadAfterRestore).toHaveBeenCalled();
+  expect(estimates.reloadAfterRestore).toHaveBeenCalled();
   expect(notifications.success).toHaveBeenCalledWith("Copia restaurada.");
   expect(service.busy()).toBe(false);
 });
@@ -103,7 +109,7 @@ test("muestra el error y no recarga pantallas si la restauración falla", async 
   await service.restore();
   expect(service.error()).toBe("Disco lleno");
   expect(notifications.danger).toHaveBeenCalledWith("Disco lleno");
-  expect(customers.enter).not.toHaveBeenCalled();
+  expect(customers.reloadAfterRestore).not.toHaveBeenCalled();
   expect(service.busy()).toBe(false);
 });
 test("guardar la copia informa un error y evita operaciones simultáneas", async () => {
@@ -123,15 +129,34 @@ test("guardar la copia informa un error y evita operaciones simultáneas", async
           });
       }),
   );
-  const first = service.save();
-  await service.save();
+  const first = service.save("share");
+  await service.save("share");
+  await vi.waitFor(() => expect(backups.share).toHaveBeenCalledTimes(1));
   expect(backups.share).toHaveBeenCalledTimes(1);
   finish();
   await first;
   expect(service.lastCopy()).toContain("06/11/2026");
   backups.share.mockRejectedValueOnce(new Error("Sin permiso"));
-  await service.save();
+  await service.save("share");
   expect(service.error()).toBe("Sin permiso");
+});
+test("cancelar el selector de carpetas deja el resumen anterior y no anuncia éxito", async () => {
+  backups.saveToFolder.mockResolvedValueOnce(null);
+  const service = setup();
+  await service.save("share");
+  const previous = service.lastCopy();
+  await service.save("folder");
+  expect(backups.saveToFolder).toHaveBeenCalledTimes(1);
+  expect(service.lastCopy()).toBe(previous);
+  expect(notifications.success).not.toHaveBeenCalled();
+  expect(service.error()).toBe("");
+});
+test("no exporta una copia si quedaron cambios sin guardar", async () => {
+  estimates.flushRecovery.mockResolvedValueOnce(false);
+  const service = setup();
+  await service.save("folder");
+  expect(backups.saveToFolder).not.toHaveBeenCalled();
+  expect(service.error()).toContain("Reintentá guardar");
 });
 test("no se cierra la pantalla mientras trabaja y sí cuando termina", async () => {
   const service = setup();

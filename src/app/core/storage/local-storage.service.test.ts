@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { LocalStorageService } from "./local-storage.service";
 
 const sqlite = vi.hoisted(() => ({
@@ -7,7 +11,7 @@ const sqlite = vi.hoisted(() => ({
   getFirstAsync: vi.fn(),
   getAllAsync: vi.fn(),
   runAsync: vi.fn(),
-  withTransactionAsync: vi.fn(),
+  withExclusiveTransactionAsync: vi.fn(),
 }));
 vi.mock("expo-sqlite", () => ({ openDatabaseAsync: sqlite.openDatabaseAsync }));
 
@@ -18,8 +22,8 @@ beforeEach(() => {
   sqlite.getFirstAsync.mockResolvedValue(null);
   sqlite.runAsync.mockResolvedValue(undefined);
   sqlite.getAllAsync.mockResolvedValue([]);
-  sqlite.withTransactionAsync.mockImplementation(
-    async (task: () => Promise<void>) => task(),
+  sqlite.withExclusiveTransactionAsync.mockImplementation(
+    async (task: (transaction: typeof sqlite) => Promise<void>) => task(sqlite),
   );
 });
 
@@ -105,12 +109,32 @@ describe("LocalStorageService", () => {
       "ausente",
     );
   });
+  test("mantiene el turno de lectura hasta terminar de capturar datos relacionados", async () => {
+    const storage = new LocalStorageService();
+    const captureStarted = Promise.withResolvers<void>();
+    const finishCapture = Promise.withResolvers<void>();
+    const order: string[] = [];
+    const read = storage.readMany(["perfil"], async () => {
+      captureStarted.resolve();
+      await finishCapture.promise;
+      order.push("lectura de logo");
+    });
+    await captureStarted.promise;
+    sqlite.runAsync.mockImplementation(async () => {
+      order.push("escritura");
+    });
+    const write = storage.write("perfil", {});
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    finishCapture.resolve();
+    await Promise.all([read, write]);
+    expect(order).toEqual(["lectura de logo", "escritura"]);
+  });
   test("reemplaza varias claves en una transacción y elimina las que no tienen valor", async () => {
     const storage = new LocalStorageService();
     await storage.replaceMany(["clientes", "presupuestos"], {
       clientes: ["Ana"],
     });
-    expect(sqlite.withTransactionAsync).toHaveBeenCalledTimes(1);
+    expect(sqlite.withExclusiveTransactionAsync).toHaveBeenCalledTimes(1);
     expect(sqlite.runAsync).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("INSERT INTO app_storage"),
@@ -125,7 +149,9 @@ describe("LocalStorageService", () => {
   });
   test("un reemplazo fallido se propaga y no bloquea las operaciones siguientes", async () => {
     const storage = new LocalStorageService();
-    sqlite.withTransactionAsync.mockRejectedValueOnce(new Error("Disco lleno"));
+    sqlite.withExclusiveTransactionAsync.mockRejectedValueOnce(
+      new Error("Disco lleno"),
+    );
     await expect(storage.replaceMany(["clientes"], {})).rejects.toThrow(
       "Disco lleno",
     );
@@ -141,6 +167,93 @@ describe("LocalStorageService", () => {
     const replace = storage.replaceMany(["clientes"], {});
     await Promise.all([update, replace]);
     expect(order).toEqual(["modificación", "reemplazo"]);
+  });
+  test("un fallo de SQLite a mitad de una restauración revierte todo y aísla lectores y escritores", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "nora-storage-"));
+    const path = join(directory, "nora.db");
+    const database = new DatabaseSync(path);
+    const connection = (db: DatabaseSync) => ({
+      getFirstAsync: async (sql: string, key: string) =>
+        db.prepare(sql).get(key) ?? null,
+      runAsync: async (sql: string, ...params: string[]) =>
+        db.prepare(sql).run(...params),
+    });
+    let release!: () => void;
+    const continueTransaction = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let firstWrite!: () => void;
+    const staged = new Promise<void>((resolve) => {
+      firstWrite = resolve;
+    });
+    sqlite.openDatabaseAsync.mockResolvedValue({
+      ...connection(database),
+      execAsync: async (sql: string) => database.exec(sql),
+      withExclusiveTransactionAsync: async (
+        task: (transaction: ReturnType<typeof connection>) => Promise<void>,
+      ) => {
+        const transaction = new DatabaseSync(path);
+        try {
+          transaction.exec("BEGIN");
+          const conn = connection(transaction);
+          await task({
+            ...conn,
+            runAsync: async (sql, ...params) => {
+              const result = await conn.runAsync(sql, ...params);
+              if (params[0] === "clientes") {
+                firstWrite();
+                await continueTransaction;
+              }
+              return result;
+            },
+          });
+          transaction.exec("COMMIT");
+        } catch (error) {
+          transaction.exec("ROLLBACK");
+          throw error;
+        } finally {
+          transaction.close();
+        }
+      },
+    });
+    try {
+      const storage = new LocalStorageService();
+      await storage.write("clientes", ["Original"]);
+      await storage.write("presupuestos", ["Original"]);
+      database.exec(`CREATE TRIGGER fail_replace BEFORE UPDATE ON app_storage
+        WHEN NEW.key = 'presupuestos' BEGIN SELECT RAISE(ABORT, 'fallo en restauración'); END`);
+      const restore = storage.replaceMany(["clientes", "presupuestos"], {
+        clientes: ["Copia"],
+        presupuestos: ["Copia"],
+      });
+      const checked = expect(restore).rejects.toThrow("fallo en restauración");
+      await staged;
+      const separateWrite = storage.write("perfil", "Nuevo");
+      const duringRestore = await storage.read("clientes");
+      release();
+      await checked;
+      await separateWrite;
+      expect(duringRestore).toEqual(["Original"]);
+      database.close();
+      const reopened = new DatabaseSync(path);
+      try {
+        expect(
+          reopened
+            .prepare("SELECT key, value FROM app_storage ORDER BY key")
+            .all(),
+        ).toEqual([
+          { key: "clientes", value: '["Original"]' },
+          { key: "perfil", value: '"Nuevo"' },
+          { key: "presupuestos", value: '["Original"]' },
+        ]);
+      } finally {
+        reopened.close();
+      }
+    } finally {
+      release();
+      if (database.isOpen) database.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
   test("continúa procesando modificaciones tras un error de validación o guardado", async () => {
     const storage = new LocalStorageService();

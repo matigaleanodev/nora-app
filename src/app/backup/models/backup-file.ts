@@ -12,7 +12,7 @@ import {
   isProfileRecord,
   isVisitRecord,
 } from "./backup-records";
-import { isValidLogo } from "./logo-image";
+import { isValidLogo } from "../../business/utils/logo-image";
 
 /** Claves versionadas que forman parte de la copia; cambiar un esquema exige actualizar el formato. */
 export const BACKUP_KEYS = [
@@ -110,6 +110,10 @@ export function parseBackup(raw: string): BackupFile {
   } catch {
     throw new Error(NOT_A_BACKUP);
   }
+  return validateBackup(parsed);
+}
+
+export function validateBackup(parsed: unknown): BackupFile {
   if (
     !object(parsed) ||
     parsed["app"] !== "nora" ||
@@ -126,6 +130,12 @@ export function parseBackup(raw: string): BackupFile {
     throw invalid("fecha inválida");
   const source = parsed["data"];
   if (!object(source)) throw invalid("no contiene datos");
+  if (
+    Object.keys(source).some(
+      (key) => !BACKUP_KEYS.some((known) => known === key),
+    )
+  )
+    throw invalid("contiene claves de datos desconocidas");
 
   const data: Record<string, unknown> = {};
   const customers = records(

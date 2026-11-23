@@ -18,21 +18,24 @@ import {
   BACKUP_KEYS,
   MAX_BACKUP_BYTES,
 } from "../models/backup-file";
-import { isUsableLogo } from "../models/logo-image";
+import { isUsableLogo } from "../../business/utils/logo-image";
 import {
   customerFixture,
   estimateFixture,
 } from "../../shared/testing/domain-fixtures";
 
-vi.mock("../models/logo-image", async (original) => {
-  const actual = await original<typeof import("../models/logo-image")>();
+vi.mock("../../business/utils/logo-image", async (original) => {
+  const actual =
+    await original<typeof import("../../business/utils/logo-image")>();
   return { ...actual, isUsableLogo: vi.fn(actual.isUsableLogo) };
 });
 const native = vi.hoisted(() => ({
   files: new Map<string, string>(),
+  modified: new Map<string, number>(),
   share: vi.fn(),
   available: vi.fn(),
   pick: vi.fn(),
+  folder: vi.fn(),
   manipulate: vi.fn(),
   release: vi.fn(),
 }));
@@ -50,11 +53,17 @@ vi.mock("expo-file-system", () => {
     (typeof base === "string" ? base : base.uri).replace(/\/$/, "") +
     (name ? "/" + name : "");
   class Directory {
+    static pickDirectoryAsync = native.folder;
     readonly uri: string;
     constructor(base: string | { uri: string }, name?: string) {
       this.uri = join(base, name) + "/";
     }
     create() {}
+    createFile(name: string, _mimeType: string) {
+      const file = new File(this, name);
+      file.write("");
+      return file;
+    }
     list() {
       return [...native.files.keys()]
         .filter((path) => path.startsWith(this.uri))
@@ -70,18 +79,32 @@ vi.mock("expo-file-system", () => {
       return native.files.has(this.uri);
     }
     get size() {
-      return native.files.get(this.uri)?.length ?? 0;
+      return Buffer.byteLength(native.files.get(this.uri) ?? "");
+    }
+    get lastModified() {
+      return native.modified.get(this.uri) ?? null;
+    }
+    get name() {
+      return this.uri.split("/").at(-1)!;
     }
     async text() {
       return native.files.get(this.uri) ?? "";
     }
     async bytes() {
       return new Uint8Array(
-        Buffer.from(native.files.get(this.uri) ?? "", "base64"),
+        Buffer.from(
+          native.files.get(this.uri) ?? "",
+          this.uri.endsWith(".json") ? "utf8" : "base64",
+        ),
       );
     }
-    write(content: string, _options?: unknown) {
-      native.files.set(this.uri, content);
+    write(content: string | Uint8Array, _options?: unknown) {
+      native.files.set(
+        this.uri,
+        typeof content === "string"
+          ? content
+          : Buffer.from(content).toString("utf8"),
+      );
     }
     delete() {
       native.files.delete(this.uri);
@@ -110,6 +133,13 @@ const stored: Record<string, unknown> = {
 const storage = {
   readMany: vi.fn(),
   replaceMany: vi.fn(),
+  updateMany: async (
+    keys: readonly string[],
+    change: (
+      read: (key: string) => Promise<unknown>,
+    ) => Promise<Record<string, unknown>>,
+  ) =>
+    storage.replaceMany(keys, await change(async (key) => stored[key] ?? null)),
 };
 const logos = {
   readBase64: vi.fn(),
@@ -132,10 +162,17 @@ const file = (name: string, content: string): string => {
 beforeEach(() => {
   vi.clearAllMocks();
   native.files.clear();
-  storage.readMany.mockImplementation(async (keys: readonly string[]) =>
-    Object.fromEntries(
-      keys.filter((key) => key in stored).map((key) => [key, stored[key]]),
-    ),
+  native.modified.clear();
+  storage.readMany.mockImplementation(
+    async (
+      keys: readonly string[],
+      capture?: (data: Readonly<Record<string, unknown>>) => Promise<unknown>,
+    ) => {
+      const data = Object.fromEntries(
+        keys.filter((key) => key in stored).map((key) => [key, stored[key]]),
+      );
+      return capture ? capture(data) : data;
+    },
   );
   storage.replaceMany.mockResolvedValue(undefined);
   native.available.mockResolvedValue(true);
@@ -175,8 +212,8 @@ describe("BackupService", () => {
     const { file: created, summary } = await setup().create(
       new Date(2026, 10, 6, 9, 30),
     );
-    expect(created.uri).toBe(
-      "file:///cache/backups/copia-nora-2026-11-06.json",
+    expect(created.uri).toMatch(
+      /^file:\/\/\/cache\/backups\/copia-nora-2026-11-06-.+\.json$/,
     );
     const saved = JSON.parse(native.files.get(created.uri)!);
     expect(saved.data["business-profile.v1"]).toEqual({
@@ -196,12 +233,17 @@ describe("BackupService", () => {
     expect(summary.logo).toBe(false);
     expect(summary.profile).toBe(true);
   });
-  test("reemplaza la copia anterior de la caché al crear una nueva", async () => {
-    native.files.set("file:///cache/backups/copia-nora-2026-01-01.json", "{}");
-    await setup().create(new Date(2026, 10, 6));
-    expect([...native.files.keys()]).toEqual([
-      "file:///cache/backups/copia-nora-2026-11-06.json",
-    ]);
+  test("limpia sólo las copias vencidas y conserva la compartida recientemente", async () => {
+    const expired = "file:///cache/backups/copia-nora-2026-01-01.json";
+    native.files.set(expired, "{}");
+    native.modified.set(expired, Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const service = setup();
+    const now = new Date(2026, 10, 6);
+    const { file: first } = await service.create(now);
+    native.modified.set(first.uri, Date.now());
+    const { file: second } = await service.create(now);
+    expect(second.uri).not.toBe(first.uri);
+    expect([...native.files.keys()]).toEqual([first.uri, second.uri]);
   });
   test("comparte el archivo como JSON y exige disponibilidad nativa", async () => {
     await setup().share();
@@ -211,6 +253,53 @@ describe("BackupService", () => {
     );
     native.available.mockResolvedValue(false);
     await expect(setup().share()).rejects.toThrow("dispositivo");
+  });
+  test("guarda el JSON en una carpeta elegida sin necesitar una aplicación para compartir", async () => {
+    const { Directory } = await import("expo-file-system");
+    native.folder.mockResolvedValueOnce(
+      new Directory("content://documents/Nora"),
+    );
+    const summary = await setup().saveToFolder();
+    expect(summary?.customers).toBe(1);
+    expect(native.share).not.toHaveBeenCalled();
+    const [saved] = [...native.files.keys()];
+    expect(saved).toMatch(/^content:\/\/documents\/Nora\/copia-nora-.*\.json$/);
+    expect(native.files.size).toBe(1);
+    expect(JSON.parse(native.files.get(saved)!).data["customers.v1"]).toEqual([
+      customerFixture,
+    ]);
+  });
+  test("cancelar la elección de carpeta no crea archivos ni modifica los datos", async () => {
+    native.folder.mockRejectedValueOnce(
+      Object.assign(new Error("Cancelado"), { code: "ERR_PICKER_CANCELLED" }),
+    );
+    await expect(setup().saveToFolder()).resolves.toBeNull();
+    expect(storage.readMany).not.toHaveBeenCalled();
+    expect(native.files.size).toBe(0);
+  });
+  test("un guardado incompleto elimina el archivo nuevo sin tocar las copias existentes", async () => {
+    const { Directory } = await import("expo-file-system");
+    const folder = new Directory("content://documents/Nora");
+    const previous = folder.createFile("anterior.json", "application/json");
+    previous.write("anterior");
+    const createFile = folder.createFile.bind(folder);
+    vi.spyOn(folder, "createFile").mockImplementationOnce((name, mimeType) => {
+      const target = createFile(name, mimeType);
+      vi.spyOn(target, "write").mockImplementationOnce(() => undefined);
+      return target;
+    });
+    native.folder.mockResolvedValueOnce(folder);
+    await expect(setup().saveToFolder()).rejects.toThrow(
+      "no se guardó completa",
+    );
+    expect([...native.files.entries()]).toEqual([[previous.uri, "anterior"]]);
+  });
+  test("rechaza una clave desconocida antes de reemplazar datos", async () => {
+    const backup = buildBackup({ "customer.v1": [customerFixture] }, undefined);
+    await expect(setup().restore(backup)).rejects.toThrow(
+      "claves de datos desconocidas",
+    );
+    expect(storage.replaceMany).not.toHaveBeenCalled();
   });
   test("elegir un archivo cancelado no hace nada y uno inválido falla sin restaurar", async () => {
     native.pick.mockResolvedValueOnce({ canceled: true, assets: null });
@@ -587,6 +676,7 @@ describe("tamaño de la copia exportada", () => {
     stored["customers.v1"] = [{ ...customerFixture, notes: "" }];
     const base = await setup().create(new Date(2026, 10, 6));
     const baseSize = base.file.size;
+    base.file.delete();
     stored["customers.v1"] = [
       { ...customerFixture, notes: "a".repeat(target - baseSize) },
     ];
@@ -602,7 +692,9 @@ describe("tamaño de la copia exportada", () => {
       expect(summary.customers).toBe(1);
       expect(native.share).toHaveBeenCalledTimes(1);
       const [created] = native.share.mock.calls[0]!;
-      expect(native.files.get(created)!.length).toBe(MAX_BACKUP_BYTES);
+      expect(Buffer.byteLength(native.files.get(created)!)).toBe(
+        MAX_BACKUP_BYTES,
+      );
     } finally {
       restoreStored();
     }
