@@ -74,11 +74,11 @@ Para una compilación local de prueba, usá Node 24, JDK 21 y un Android SDK con
 npm ci
 npx expo prebuild --platform android
 cd android
-./gradlew :app:assembleRelease
+./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-En Windows, ejecutá `gradlew.bat` en lugar de `./gradlew`. El APK local usa la firma de prueba del proyecto generado por Expo. Para distribuirlo, usá el perfil `preview` o firmalo con una clave privada que puedas conservar para las actualizaciones. El APK incluye el código y los recursos de Nora y funciona sin Metro ni Expo Go.
+En PowerShell, usá `.\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,x86_64'`. El APK local usa la firma de prueba del proyecto generado por Expo. Para distribuirlo, usá el perfil `preview` o firmalo con una clave privada que puedas conservar para las actualizaciones. El APK incluye el código y los recursos de Nora y funciona sin Metro ni Expo Go.
 
 1. Instalá el APK y abrí **Mi negocio** desde Inicio para guardar tu nombre y, si querés, tus datos de contacto y logo.
 2. Registrá un cliente y sus direcciones. Desde **Presupuestos**, cargá materiales y mano de obra, revisá el borrador y compartí el PDF. El estado se cambia manualmente.

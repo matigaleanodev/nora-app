@@ -74,11 +74,11 @@ For a local test build, use Node 24, JDK 21 and an Android SDK with API 36, Buil
 npm ci
 npx expo prebuild --platform android
 cd android
-./gradlew :app:assembleRelease
+./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-On Windows, run `gradlew.bat` in place of `./gradlew`. The local APK uses the generated Expo project's test signing key. For distribution, use the `preview` profile or sign the APK with a private key you can retain for updates. The APK contains Nora's code and assets and runs independently of Metro and Expo Go.
+In PowerShell, use `.\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,x86_64'`. The local APK uses the generated Expo project's test signing key. For distribution, use the `preview` profile or sign the APK with a private key you can retain for updates. The APK contains Nora's code and assets and runs independently of Metro and Expo Go.
 
 1. Install the APK and open **Mi negocio** from Home to save your name, optional contact information and logo.
 2. Add a customer and their addresses. In **Presupuestos**, add materials and labor, review the draft and share the PDF. Change the estimate status manually.
