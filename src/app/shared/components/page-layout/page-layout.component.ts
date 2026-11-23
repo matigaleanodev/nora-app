@@ -29,7 +29,7 @@ import { ActionButtonComponent } from "../action-button/action-button.component"
     ActionButtonComponent,
   ],
   template: `
-    <keyboard-avoiding-view class="flex-1" behavior="height">
+    <keyboard-avoiding-view class="flex-1" behavior="padding">
       <view class="page-heading flex-row items-center gap-2 px-4 py-2">
         @if (backLabel()) {
           <nora-button

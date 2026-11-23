@@ -28,7 +28,7 @@ import { ActionButtonComponent } from "../action-button/action-button.component"
     (requestClose)="cancel.emit()"
   >
     <safe-area-view class="app-screen flex-1">
-      <keyboard-avoiding-view class="flex-1" behavior="height">
+      <keyboard-avoiding-view class="flex-1" behavior="padding">
         <view class="flex-row items-center justify-between gap-3 px-4 py-3">
           <text class="section-title flex-1" accessibilityRole="header">{{
             title()
