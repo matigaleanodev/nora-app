@@ -1,6 +1,8 @@
 import { Injectable } from "@angular/core";
 import type { SQLiteDatabase } from "expo-sqlite";
 
+type ReadValue = <T>(key: string) => Promise<T | null>;
+
 @Injectable({ providedIn: "root" })
 export class LocalStorageService {
   private database?: Promise<SQLiteDatabase>;
@@ -8,7 +10,13 @@ export class LocalStorageService {
 
   /** Lee JSON local; devuelve null si no existe. El tipo T no implica validación del contenido. */
   async read<T>(key: string): Promise<T | null> {
-    const database = await this.open();
+    return this.readFrom(await this.open(), key);
+  }
+
+  private async readFrom<T>(
+    database: SQLiteDatabase,
+    key: string,
+  ): Promise<T | null> {
     const row = await database.getFirstAsync<{ value: string }>(
       "SELECT value FROM app_storage WHERE key = ?",
       key,
@@ -16,8 +24,17 @@ export class LocalStorageService {
     return row ? (JSON.parse(row.value) as T) : null;
   }
 
-  async write<T>(key: string, value: T): Promise<void> {
-    const database = await this.open();
+  write<T>(key: string, value: T): Promise<void> {
+    return this.enqueue(async () =>
+      this.writeTo(await this.open(), key, value),
+    );
+  }
+
+  private async writeTo(
+    database: SQLiteDatabase,
+    key: string,
+    value: unknown,
+  ): Promise<void> {
     await database.runAsync(
       "INSERT INTO app_storage (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
       key,
@@ -27,14 +44,82 @@ export class LocalStorageService {
 
   /**
    * Serializa lectura, modificación y guardado para evitar perder cambios concurrentes.
-   * La exclusión sólo aplica a llamadas a update en esta instancia, no a otros procesos ni a write.
+   * Comparte la cola de escrituras de esta instancia.
    * Propaga el fallo al consumidor sin bloquear las siguientes operaciones de la cola.
    */
-  update<T>(key: string, change: (current: T | null) => T): Promise<void> {
-    const operation = this.mutationQueue.then(async () => {
-      const next = change(await this.read<T>(key));
-      await this.write(key, next);
+  update<T>(
+    key: string,
+    change: (current: T | null) => T | Promise<T>,
+  ): Promise<void> {
+    return this.enqueue(async () => {
+      const database = await this.open();
+      const next = await change(await this.readFrom<T>(database, key));
+      await this.writeTo(database, key, next);
     });
+  }
+
+  /** Lee un conjunto de claves de forma coherente, después de las modificaciones en curso. */
+  readMany(keys: readonly string[]): Promise<Record<string, unknown>>;
+  readMany<T>(
+    keys: readonly string[],
+    capture: (entries: Readonly<Record<string, unknown>>) => Promise<T>,
+  ): Promise<T>;
+  readMany<T>(
+    keys: readonly string[],
+    capture?: (entries: Readonly<Record<string, unknown>>) => Promise<T>,
+  ): Promise<Record<string, unknown> | T> {
+    return this.enqueue(async () => {
+      const database = await this.open();
+      const rows = await database.getAllAsync<{ key: string; value: string }>(
+        `SELECT key, value FROM app_storage WHERE key IN (${keys.map(() => "?").join(", ")})`,
+        ...keys,
+      );
+      const entries = Object.fromEntries(
+        rows.map((row) => [row.key, JSON.parse(row.value) as unknown]),
+      );
+      return capture ? capture(entries) : entries;
+    });
+  }
+
+  /**
+   * Reemplaza todas las claves indicadas en una única transacción: o se aplican todas o ninguna.
+   * Una clave sin valor en entries se elimina.
+   */
+  replaceMany(
+    keys: readonly string[],
+    entries: Readonly<Record<string, unknown>>,
+  ): Promise<void> {
+    return this.updateMany(keys, () => entries);
+  }
+
+  /** Lee valores actuales y reemplaza las claves indicadas en la misma transacción. */
+  updateMany(
+    keys: readonly string[],
+    change: (
+      read: ReadValue,
+    ) =>
+      | Readonly<Record<string, unknown>>
+      | Promise<Readonly<Record<string, unknown>>>,
+  ): Promise<void> {
+    return this.enqueue(async () => {
+      const database = await this.open();
+      await database.withExclusiveTransactionAsync(async (transaction) => {
+        const entries = await change((key) => this.readFrom(transaction, key));
+        for (const key of keys) {
+          if (Object.hasOwn(entries, key))
+            await this.writeTo(transaction, key, entries[key]);
+          else
+            await transaction.runAsync(
+              "DELETE FROM app_storage WHERE key = ?",
+              key,
+            );
+        }
+      });
+    });
+  }
+
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const operation = this.mutationQueue.then(task);
     this.mutationQueue = operation.catch(() => undefined);
     return operation;
   }

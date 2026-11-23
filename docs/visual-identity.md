@@ -117,7 +117,7 @@ Icon exploration: [prompt and selection record](brand-explorations/nora-icon/pro
 
 User-declared future context: a Google Play subscription version could include an assistant helping create estimates from a few instructions. This intention supports Nora's assistant metaphor without claiming a bot, voice interaction, or human support exists today. It does not change current scope or authorize implementing subscriptions or assistance in this chat.
 
-Current rules are detailed in [Design and user experience](ux-guidelines.md). The [local design kit](design-kit/README.md) gathers reference screens and components; the [implementation handoff](implementation-handoff.md) separates current state, target design, and implementation steps.
+Current rules are detailed in [Design and user experience](ux-guidelines.md). The [local design kit](design-kit/README.md) gathers reference screens and components.
 
 ## Bounded open items
 

@@ -10,9 +10,20 @@ import {
 } from "../../estimates/models/estimate.model";
 import { STATUS_LABELS } from "../../estimates/services/estimates-page.service";
 import { calculateEstimateTotal } from "../../estimates/utils/estimate-totals";
+import type { Visit } from "../../agenda/models/visit.model";
+import { AgendaPageService } from "../../agenda/services/agenda-page.service";
+import { VisitsService } from "../../agenda/services/visits.service";
+import {
+  describeVisit,
+  describeWhen,
+  groupVisits,
+} from "../../agenda/utils/visit-format";
+import { calendarDateFromLocal } from "../../shared/utils/calendar-date";
 @Injectable({ providedIn: "root" })
 export class HomePageService {
   readonly business = inject(BusinessPageService);
+  readonly agenda = inject(AgendaPageService);
+  private readonly visits = inject(VisitsService);
   private readonly profiles = inject(BusinessProfileService);
   private readonly estimates = inject(EstimatesService);
   private readonly recovery = inject(EstimateRecoveryService);
@@ -23,6 +34,16 @@ export class HomePageService {
   readonly loading = signal(true);
   readonly dismissed = signal(false);
   readonly labels = STATUS_LABELS;
+  private readonly agendaRecords = signal<readonly Visit[]>([]);
+  readonly today = signal(calendarDateFromLocal(new Date()));
+  /** Vencidas, de hoy y las próximas, hasta 3 para no llenar Inicio. */
+  readonly agendaPreview = computed(() => {
+    const groups = groupVisits(this.agendaRecords(), this.today());
+    return [...groups.overdue, ...groups.today, ...groups.upcoming].slice(0, 3);
+  });
+  describeAgenda(visit: Visit): string {
+    return `${describeWhen(visit, this.today())} · ${describeVisit(visit)}`;
+  }
   readonly drafts = computed(
     () =>
       this.records().filter((value) => value.status === EstimateStatus.Draft)
@@ -45,11 +66,15 @@ export class HomePageService {
     this.loading.set(true);
     this.error.set("");
     try {
-      const [profile, records, recoveries] = await Promise.all([
+      this.today.set(calendarDateFromLocal(new Date()));
+      const [profile, records, recoveries, visits] = await Promise.all([
         this.profiles.get(),
         this.estimates.getAll(),
         this.recovery.getAll(),
+        // La agenda es complementaria: si falla no bloquea Inicio.
+        this.visits.getAll().catch(() => [] as readonly Visit[]),
       ]);
+      this.agendaRecords.set(visits);
       this.profile.set(profile);
       this.records.set(records);
       this.incomplete.set(

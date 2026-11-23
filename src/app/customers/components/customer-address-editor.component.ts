@@ -61,18 +61,21 @@ export type AddressChanges = Partial<Omit<CustomerAddress, "id">>;
       [disabled]="disabled()"
       (valueChange)="changed.emit({ apartment: $event })"
     />
-    <nora-button
-      variant="danger"
-      text="Quitar dirección"
-      [label]="'Quitar dirección ' + (index() + 1)"
-      [disabled]="disabled()"
-      (pressed)="removed.emit()"
-    />
+    @if (removable()) {
+      <nora-button
+        variant="danger"
+        text="Quitar dirección"
+        [label]="'Quitar dirección ' + (index() + 1)"
+        [disabled]="disabled()"
+        (pressed)="removed.emit()"
+      />
+    }
   </view>`,
 })
 export class CustomerAddressEditorComponent {
   readonly address = input.required<CustomerInput["addresses"][number]>();
   readonly index = input.required<number>();
+  readonly removable = input(false);
   readonly disabled = input(false);
   readonly changed = output<AddressChanges>();
   readonly removed = output<void>();

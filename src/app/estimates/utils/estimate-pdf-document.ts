@@ -3,8 +3,8 @@ import fontkit from "@pdf-lib/fontkit";
 import type { BusinessProfile } from "../../business/models/business-profile.model";
 import { formatCustomerPhone } from "../../customers/models/customer.model";
 import { formatCalendarDate } from "../../shared/utils/calendar-date";
+import { formatMoney } from "../../shared/utils/money-format";
 import {
-  Currency,
   EstimateItemType,
   EstimateStatus,
   type Estimate,
@@ -16,6 +16,12 @@ import {
 export interface PdfLogo {
   readonly bytes: Uint8Array;
   readonly mimeType: "image/png" | "image/jpeg";
+}
+/** Incrusta el logo en el documento; es la misma decodificación que usa el PDF y que valida las copias. */
+export async function embedLogo(document: PDFDocument, logo: PdfLogo) {
+  return logo.mimeType === "image/png"
+    ? await document.embedPng(logo.bytes)
+    : await document.embedJpg(logo.bytes);
 }
 export interface PdfFonts {
   readonly regular: Uint8Array;
@@ -40,13 +46,7 @@ const units: Record<string, string> = {
   hour: "h",
   job: "trab.",
 };
-const number = new Intl.NumberFormat("es-AR", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 const quantity = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 3 });
-const money = (cents: number, currency: Currency): string =>
-  `${currency === Currency.USD ? "US$" : "$"} ${number.format(cents / 100)}`;
 /** Genera bytes PDF reales sin WebView, impresión del sistema ni recursos de red. */
 export async function buildEstimatePdf(
   estimate: Estimate,
@@ -222,10 +222,11 @@ export async function buildEstimatePdf(
   const headerTop = y;
   let logoWidth = 0;
   if (logo) {
-    const image =
-      logo.mimeType === "image/png"
-        ? await document.embedPng(logo.bytes)
-        : await document.embedJpg(logo.bytes);
+    const image = await embedLogo(document, logo).catch(() => {
+      throw new Error(
+        "No pudimos usar tu logo en el PDF. Volvé a elegirlo en Mi negocio.",
+      );
+    });
     const dimensions = image.scaleToFit(56, 56);
     page!.drawImage(image, {
       x: MARGIN,
@@ -447,8 +448,8 @@ export async function buildEstimatePdf(
         [
           item.description,
           `${quantity.format(item.quantity)} ${units[item.unit]}`,
-          money(item.unitPriceCents, estimate.currency),
-          money(calculateItemSubtotal(item), estimate.currency),
+          formatMoney(item.unitPriceCents, estimate.currency),
+          formatMoney(calculateItemSubtotal(item), estimate.currency),
         ],
         false,
         continued,
@@ -457,7 +458,10 @@ export async function buildEstimatePdf(
     ensure(23);
     gap(5);
     const subtotalLabel = `Subtotal ${label.toLowerCase()}`;
-    const subtotal = money(calculateEstimateTotal(items), estimate.currency);
+    const subtotal = formatMoney(
+      calculateEstimateTotal(items),
+      estimate.currency,
+    );
     const subtotalX = PAGE_WIDTH - MARGIN - measure(subtotal, 10, bold);
     page.drawText(subtotalLabel, {
       x: subtotalX - 16 - measure(subtotalLabel, 10),
@@ -489,7 +493,7 @@ export async function buildEstimatePdf(
     font: bold,
     color: INK,
   });
-  const total = money(
+  const total = formatMoney(
     calculateEstimateTotal(estimate.items),
     estimate.currency,
   );

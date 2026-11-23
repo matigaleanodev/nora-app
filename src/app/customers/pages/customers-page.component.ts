@@ -47,6 +47,10 @@ import { CustomersFormComponent } from "../components/customers-form.component";
               [busy]="vm.busy()"
               (edit)="vm.edit()"
               (archive)="vm.archive()"
+              (call)="vm.call()"
+              (whatsapp)="vm.whatsapp()"
+              (email)="vm.email()"
+              (map)="vm.openMap($event)"
             />
           }
         }

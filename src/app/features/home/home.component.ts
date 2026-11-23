@@ -38,6 +38,21 @@ import { PageLayoutComponent } from "../../shared/components/page-layout/page-la
         text="Editar datos del negocio"
         (pressed)="vm.business.open()"
       />
+      <text class="section-title">Agenda</text>
+      @for (visit of vm.agendaPreview(); track visit.id) {
+        <pressable
+          class="compact-row gap-1"
+          accessibilityRole="button"
+          [accessibilityLabel]="'Abrir ' + visit.title"
+          (press)="vm.agenda.openVisit(visit.id)"
+        >
+          <text class="task-title">{{ visit.title }}</text>
+          <text class="footnote">{{ vm.describeAgenda(visit) }}</text>
+        </pressable>
+      } @empty {
+        <text class="muted">No tenés visitas pendientes.</text>
+      }
+      <nora-button text="Ver agenda" (pressed)="vm.agenda.open()" />
       <text class="section-title">Tus presupuestos</text>
       <view>
         <nora-navigation-row

@@ -1,15 +1,32 @@
+import { Component, signal } from "@angular/core";
 import { render, screen, userEvent, fireEvent } from "@ng-native/testing";
 import { expect, test, vi } from "vitest";
 import { FormFieldComponent } from "./form-field.component";
 
+const typed = vi.fn();
+
+/** Campo controlado como en la app: el padre devuelve el valor emitido. */
+@Component({
+  imports: [FormFieldComponent],
+  template: `<nora-field
+    label="Precio"
+    keyboard="decimal-pad"
+    [value]="value()"
+    (valueChange)="update($event)"
+  />`,
+})
+class ControlledFieldHost {
+  protected readonly value = signal("");
+  protected update(next: string): void {
+    this.value.set(next);
+    typed(next);
+  }
+}
+
 test("muestra el valor y emite cambios sin modificar ni convertir la entrada", async () => {
-  const onChange = vi.fn();
-  await render(FormFieldComponent, {
-    inputs: { label: "Precio", value: "", keyboard: "decimal-pad" },
-    on: { valueChange: onChange },
-  });
+  await render(ControlledFieldHost);
   await userEvent.type(screen.getByLabelText("Precio"), "10,25");
-  expect(onChange).toHaveBeenLastCalledWith("10,25");
+  expect(typed).toHaveBeenLastCalledWith("10,25");
 });
 
 test("captura el email autocompletado al terminar de editar sin depender del tipeo", async () => {
@@ -31,9 +48,21 @@ test("captura el email autocompletado al terminar de editar sin depender del tip
 test("un evento de fin de edición sin texto no borra un valor existente", async () => {
   const valueChange = vi.fn();
   await render(FormFieldComponent, {
-    inputs: { label: "Email", value: "ana@gmail.com" },
+    inputs: { label: "Email", value: "ana@gmail.com", autoComplete: "email" },
     on: { valueChange },
   });
   await fireEvent(screen.getByLabelText("Email"), "endEditing", {});
+  expect(valueChange).not.toHaveBeenCalled();
+});
+
+test("un fin de edición atrasado no devuelve el precio anterior al editor limpio", async () => {
+  const valueChange = vi.fn();
+  await render(FormFieldComponent, {
+    inputs: { label: "Precio", value: "", keyboard: "decimal-pad" },
+    on: { valueChange },
+  });
+  await fireEvent(screen.getByLabelText("Precio"), "endEditing", {
+    text: "10,25",
+  });
   expect(valueChange).not.toHaveBeenCalled();
 });

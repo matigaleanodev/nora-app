@@ -1,6 +1,9 @@
 import { inject, Injectable } from "@angular/core";
+import type { ImagePickerResult } from "expo-image-picker";
 import { IdService } from "../../shared/services/id.service";
+import { convertWebpToPng } from "../../shared/utils/webp-to-png";
 import type { BusinessLogo } from "../models/business-profile.model";
+import { canEmbed, matchesImageFormat } from "../utils/logo-image";
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 const EXTENSIONS = {
   "image/jpeg": "jpg",
@@ -17,6 +20,18 @@ export class BusinessLogoService {
       allowsMultipleSelection: false,
       quality: 0.85,
     });
+    return this.selectedLogo(result);
+  }
+  /** Android puede recrear la Activity mientras está abierto el selector. */
+  async recoverPending(): Promise<BusinessLogo | null> {
+    const picker = await import("expo-image-picker");
+    const result = await picker.getPendingResultAsync();
+    if (!result) return null;
+    if (!("canceled" in result))
+      throw new Error("No pudimos recuperar el logo. Volvé a elegirlo.");
+    return this.selectedLogo(result);
+  }
+  private selectedLogo(result: ImagePickerResult): BusinessLogo | null {
     if (result.canceled) return null;
     const asset = result.assets[0];
     const mimeType = asset?.mimeType;
@@ -36,6 +51,19 @@ export class BusinessLogoService {
       throw new Error("No pudimos leer el logo. Volvé a elegirlo.");
     if (source.size > MAX_LOGO_BYTES)
       throw new Error("El logo debe pesar como máximo 5 MB.");
+    const bytes = await source.bytes();
+    let valid = matchesImageFormat(logo.mimeType, bytes);
+    if (valid) {
+      if (logo.mimeType === "image/webp") {
+        const png = await convertWebpToPng(logo.uri).catch(() => undefined);
+        valid =
+          !!png && (await canEmbed({ bytes: png, mimeType: "image/png" }));
+      } else {
+        valid = await canEmbed({ bytes, mimeType: logo.mimeType });
+      }
+    }
+    if (!valid)
+      throw new Error("El logo no se puede usar en el PDF. Elegí otra imagen.");
     const directory = new Directory(Paths.document, "business-logos");
     directory.create({ idempotent: true, intermediates: true });
     const target = new File(
@@ -43,13 +71,50 @@ export class BusinessLogoService {
       `${await this.ids.create()}.${EXTENSIONS[logo.mimeType]}`,
     );
     try {
-      source.copy(target);
+      await source.copy(target);
+      if (!target.exists || target.size !== bytes.length)
+        throw new Error("No pudimos guardar el logo en este teléfono.");
     } catch (error) {
       // Una copia interrumpida tampoco debe dejar un archivo parcial.
       if (target.exists) target.delete();
       throw error;
     }
     return { uri: target.uri, mimeType: logo.mimeType };
+  }
+  /** Lee el logo guardado para una copia de seguridad; undefined si el archivo ya no existe. */
+  async readBase64(logo: BusinessLogo): Promise<string | undefined> {
+    try {
+      const { File } = await import("expo-file-system");
+      const file = new File(logo.uri);
+      if (!file.exists || file.size <= 0 || file.size > MAX_LOGO_BYTES)
+        return undefined;
+      return await file.base64();
+    } catch {
+      return undefined;
+    }
+  }
+  /** Escribe en el almacenamiento durable un logo restaurado, sin dejar archivos parciales. */
+  async restore(
+    base64: string,
+    mimeType: BusinessLogo["mimeType"],
+  ): Promise<BusinessLogo> {
+    if (!(mimeType in EXTENSIONS)) throw new Error("Formato de logo inválido.");
+    const { Directory, File, Paths } = await import("expo-file-system");
+    const directory = new Directory(Paths.document, "business-logos");
+    directory.create({ idempotent: true, intermediates: true });
+    const target = new File(
+      directory,
+      `${await this.ids.create()}.${EXTENSIONS[mimeType]}`,
+    );
+    try {
+      target.write(base64, { encoding: "base64" });
+      if (!target.exists || target.size <= 0)
+        throw new Error("No pudimos restaurar el logo en este teléfono.");
+    } catch (error) {
+      if (target.exists) target.delete();
+      throw error;
+    }
+    return { uri: target.uri, mimeType };
   }
   /** La limpieza nunca borra imágenes originales ni impide guardar el perfil. */
   async removeOwned(logo: BusinessLogo | undefined): Promise<void> {

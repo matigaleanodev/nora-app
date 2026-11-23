@@ -44,10 +44,22 @@ yarn-error.*
 
 # Instrucciones locales y planificación activa
 /agents.md
-/AGENTS.md
 /agents.es.md
-/AGENTS.es.md
 /CLAUDE.md
 /roadmap.md
 /Roadmap.md
 /roadmap.es.md
+
+# Seguimiento privado fuera del repositorio
+/agents.md
+/agents.es.md
+/roadmap*.md
+/Roadmap*.md
+/context.md
+/status/
+/mentor/
+/mentor-notes.md
+/.tmp/
+
+# Instrucciones técnicas públicas de Codex
+!/AGENTS.md

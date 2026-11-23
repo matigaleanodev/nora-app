@@ -1,7 +1,7 @@
 import { Component, input, output } from "@angular/core";
 import { Text, View } from "@ng-native/components";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
-import type { Customer } from "../models/customer.model";
+import type { Customer, CustomerAddress } from "../models/customer.model";
 import { CustomerAddressCardComponent } from "./customer-address-card.component";
 @Component({
   selector: "nora-customers-detail",
@@ -25,10 +25,38 @@ import { CustomerAddressCardComponent } from "./customer-address-card.component"
       ><text class="body-text"
         >Notas: {{ customer().notes || "Sin notas" }}</text
       >
+      @if (customer().phone || customer().email) {
+        <view class="flex-row flex-wrap gap-2">
+          @if (customer().phone) {
+            <nora-button
+              variant="secondary"
+              text="Llamar"
+              [label]="'Llamar a ' + customer().name"
+              (pressed)="call.emit()"
+            />
+            @if (customer().phone?.whatsapp) {
+              <nora-button
+                variant="secondary"
+                text="WhatsApp"
+                [label]="'Enviar WhatsApp a ' + customer().name"
+                (pressed)="whatsapp.emit()"
+              />
+            }
+          }
+          @if (customer().email) {
+            <nora-button
+              variant="secondary"
+              text="Email"
+              [label]="'Enviar email a ' + customer().name"
+              (pressed)="email.emit()"
+            />
+          }
+        </view>
+      }
     </view>
     <text class="section-title">Direcciones</text>
     @for (address of customer().addresses; track address.id) {
-      <nora-address-card [address]="address" />
+      <nora-address-card [address]="address" (map)="map.emit($event)" />
     } @empty {
       <text class="muted">Sin direcciones guardadas.</text>
     }
@@ -51,4 +79,8 @@ export class CustomersDetailComponent {
   readonly busy = input(false);
   readonly edit = output<void>();
   readonly archive = output<void>();
+  readonly call = output<void>();
+  readonly whatsapp = output<void>();
+  readonly email = output<void>();
+  readonly map = output<CustomerAddress>();
 }

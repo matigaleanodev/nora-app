@@ -1,6 +1,7 @@
 node_modules/
 .angular-native/
 .expo/
+.tmp/
 dist/
 build/
 coverage/
