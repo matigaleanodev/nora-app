@@ -29,7 +29,7 @@ import { ActionButtonComponent } from "../action-button/action-button.component"
     ActionButtonComponent,
   ],
   template: `
-    <keyboard-avoiding-view class="flex-1" behavior="height">
+    <keyboard-avoiding-view class="flex-1" behavior="padding">
       <view class="page-heading flex-row items-center gap-2 px-4 py-2">
         @if (backLabel()) {
           <nora-button
@@ -42,7 +42,7 @@ import { ActionButtonComponent } from "../action-button/action-button.component"
         }
 
         <view class="flex-1 gap-1">
-          <text class="heading">{{ title() }}</text>
+          <text class="heading" accessibilityRole="header">{{ title() }}</text>
         </view>
         @if (!backLabel()) {
           <pressable
@@ -57,20 +57,24 @@ import { ActionButtonComponent } from "../action-button/action-button.component"
       <view class="page-body flex-1">
         <scroll-view
           class="flex-1"
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
           [contentContainerStyle]="{ padding: 16, paddingBottom: 24 }"
           (scroll)="rememberScroll($event)"
           [scrollEventThrottle]="32"
         >
           <view class="gap-4" animate.enter="content-enter">
-            @if (error()) {
-              <text class="error-text">{{ error() }}</text>
-            }
             <ng-content />
           </view>
         </scroll-view>
         <ng-content select="[page-fab]" />
       </view>
+      @if (error()) {
+        <view class="px-4 py-2">
+          <text class="error-text" accessibilityLiveRegion="polite">{{
+            error()
+          }}</text>
+        </view>
+      }
       <ng-content select="[page-footer]" />
     </keyboard-avoiding-view>
   `,
@@ -87,6 +91,10 @@ export class PageLayoutComponent {
   readonly back = output<void>();
   private readonly scroll = viewChild(ScrollView);
   private readonly positions = new Map<string, number>();
+  scrollToStart(): void {
+    this.positions.delete(this.resetKey());
+    this.scroll()?.scrollTo({ y: 0, animated: false });
+  }
   protected rememberScroll(event: {
     nativeEvent?: { contentOffset?: { y?: number } };
   }): void {

@@ -26,6 +26,7 @@ import {
   parseMoneyInput,
   parseQuantityInput,
 } from "../../shared/utils/decimal-input";
+import { formatMoneyInput } from "../../shared/utils/money-format";
 import {
   calculateEstimateTotal,
   calculateItemSubtotal,
@@ -256,13 +257,15 @@ export class EstimatesPageService {
     if (this.busy()) return;
     this.loadState.set(true);
     try {
+      await this.writeQueue;
+      const revision = this.revision;
       const [estimates, customers, recoveries] = await Promise.all([
         this.estimates.getAll(),
         this.customers.getAll(),
         this.recovery.getAll(),
       ]);
       this.records.set(estimates);
-      this.recoveries.set(recoveries);
+      if (revision === this.revision) this.recoveries.set(recoveries);
       this.customerRecords.set(customers);
       this.errorState.set("");
     } catch {
@@ -271,6 +274,25 @@ export class EstimatesPageService {
     } finally {
       this.loadState.set(false);
     }
+  }
+  async flushRecovery(): Promise<boolean> {
+    let pending: Promise<void>;
+    do {
+      pending = this.writeQueue;
+      await pending;
+    } while (pending !== this.writeQueue);
+    return this.saveState() !== "failed";
+  }
+  reloadAfterRestore(): Promise<void> {
+    this.selectedId.set(null);
+    this.search.set("");
+    this.statusFilter.set("all");
+    this.startForm(emptyForm());
+    this.screenState.set("list");
+    this.records.set([]);
+    this.customerRecords.set([]);
+    this.recoveries.set([]);
+    return this.enter();
   }
   open(estimate: Estimate): void {
     const recovery = this.recoveries().find(
@@ -302,7 +324,7 @@ export class EstimatesPageService {
       items: estimate.items.map((item) => ({
         ...item,
         quantity: String(item.quantity).replace(".", ","),
-        price: (item.unitPriceCents / 100).toFixed(2).replace(".", ","),
+        price: formatMoneyInput(item.unitPriceCents),
       })),
     });
   }
@@ -323,6 +345,7 @@ export class EstimatesPageService {
   }
   chooseCustomer(customer: Customer): void {
     if (this.busy()) return;
+    this.keyboard.dismiss();
     this.formState.update((form) => ({
       ...form,
       clientId: customer.id,
@@ -390,6 +413,7 @@ export class EstimatesPageService {
               ),
       }));
       this.editor.set(null);
+      this.keyboard.dismiss();
       this.persist();
       if (another) this.addItem(editor.item.type);
     } catch (error) {
@@ -399,6 +423,8 @@ export class EstimatesPageService {
     }
   }
   cancelItem(): void {
+    if (this.busy()) return;
+    this.keyboard.dismiss();
     this.editor.set(null);
     this.editorError.set("");
     this.persist();
@@ -416,6 +442,7 @@ export class EstimatesPageService {
       ))
     )
       return;
+    if (this.busy() || this.form().items[index] !== item) return;
     this.editor.set(null);
     this.patch(
       "items",
@@ -450,38 +477,63 @@ export class EstimatesPageService {
     this.saveState.set("saved");
   }
   async deleteRecovery(value: EstimateRecovery): Promise<void> {
-    if (
-      !(await this.dialogs.confirm("¿Eliminar borrador incompleto?", {
-        confirm: "Eliminar",
-        cancel: "Conservar",
-        destructive: true,
-      }))
-    )
-      return;
+    if (this.busy()) return;
+    this.working.set(true);
     try {
+      if (
+        !(await this.dialogs.confirm("¿Eliminar borrador incompleto?", {
+          confirm: "Eliminar",
+          cancel: "Conservar",
+          destructive: true,
+        }))
+      )
+        return;
+      await this.writeQueue;
       await this.recovery.remove(value.id);
       this.recoveries.update((records) =>
         records.filter((record) => record.id !== value.id),
       );
     } catch (error) {
       this.fail(error, "No pudimos eliminar el borrador.");
+    } finally {
+      this.working.set(false);
     }
   }
   private persist(): void {
     if (!this.dirty() && !this.editor() && !this.recoveryId) return;
-    this.recoveryId ??= this.ids.create().catch((error) => {
-      this.recoveryId = null;
-      throw error;
-    });
-    const id = this.recoveryId;
-    const form = structuredClone(this.form());
-    const editor = structuredClone(this.editor());
+    const id: Promise<string> =
+      this.recoveryId ??
+      this.writeQueue
+        .then(() => this.ids.create())
+        .catch((error) => {
+          if (this.recoveryId === id) this.recoveryId = null;
+          throw error;
+        });
+    this.recoveryId = id;
+    const form = this.form();
+    const editor = this.editor();
     const estimateId = this.selectedId();
+    const empty =
+      !estimateId &&
+      !editor &&
+      JSON.stringify(form) === JSON.stringify(emptyForm());
     const revision = ++this.revision;
     this.saveState.set("saving");
     this.writeQueue = this.writeQueue
       .catch(() => undefined)
       .then(async () => {
+        if (empty) {
+          const recoveryId = await id;
+          await this.recovery.remove(recoveryId);
+          this.recoveries.update((records) =>
+            records.filter((record) => record.id !== recoveryId),
+          );
+          if (revision === this.revision) {
+            this.recoveryId = null;
+            this.saveState.set("idle");
+          }
+          return;
+        }
         const value: EstimateRecovery = {
           id: await id,
           estimateId,
@@ -515,8 +567,7 @@ export class EstimatesPageService {
   async back(): Promise<void> {
     if (this.busy()) return;
     if (this.editingConditions()) {
-      await this.writeQueue;
-      if (this.saveState() === "failed") {
+      if (!(await this.flushRecovery())) {
         this.notifications.danger(
           "No pudimos guardar los cambios. Reintentá antes de volver.",
         );
@@ -527,18 +578,18 @@ export class EstimatesPageService {
       return;
     }
     if (this.choosingCustomer()) {
+      this.keyboard.dismiss();
       this.choosingCustomer.set(false);
       return;
     }
     if (this.activeEditor()) {
-      await this.writeQueue;
-      if (this.saveState() === "failed") return;
+      if (!(await this.flushRecovery())) return;
+      this.keyboard.dismiss();
       this.editorVisible.set(false);
       this.editorError.set("");
       return;
     }
-    await this.writeQueue;
-    if (this.saveState() === "failed") {
+    if (!(await this.flushRecovery())) {
       this.notifications.danger(
         "No pudimos guardar los cambios. Reintentá antes de volver.",
       );
@@ -577,20 +628,16 @@ export class EstimatesPageService {
         items: this.toItems(form.items),
       };
       const id = this.selectedId();
+      const recoveryId = this.recoveryId ? await this.recoveryId : undefined;
       const saved = id
-        ? await this.estimates.update(id, input)
-        : await this.estimates.create(
-            input,
-            this.recoveryId ? await this.recoveryId : undefined,
-          );
+        ? await this.estimates.update(id, input, recoveryId)
+        : await this.estimates.create(input, recoveryId);
       this.records.update((records) => [
         ...records.filter((estimate) => estimate.id !== saved.id),
         saved,
       ]);
       this.selectedId.set(saved.id);
-      const recoveryId = this.recoveryId ? await this.recoveryId : null;
       if (recoveryId) {
-        await this.recovery.remove(recoveryId);
         this.recoveries.update((records) =>
           records.filter((record) => record.id !== recoveryId),
         );
@@ -686,6 +733,7 @@ export class EstimatesPageService {
     }));
   }
   private startForm(form: EstimateForm): void {
+    this.revision++;
     this.editingConditions.set(false);
     this.recoveryId = null;
     this.editor.set(null);

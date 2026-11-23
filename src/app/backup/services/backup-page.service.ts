@@ -52,15 +52,24 @@ export class BackupPageService {
     if (!this.busy()) this.shell.information.set(null);
   }
 
-  async save(): Promise<void> {
+  async save(destination: "folder" | "share"): Promise<void> {
     if (this.busy()) return;
     this.working.set(true);
     this.errorState.set("");
     try {
-      const summary = await this.backups.share();
+      if (!(await this.estimates.flushRecovery()))
+        throw new Error(
+          "Reintentá guardar los cambios del presupuesto antes de hacer la copia.",
+        );
+      const summary = await (destination === "folder"
+        ? this.backups.saveToFolder()
+        : this.backups.share());
+      if (!summary) return;
       this.lastSaved.set(
         `${formatBackupDate(summary.createdAt)}: ${describeBackup(summary)}`,
       );
+      if (destination === "folder")
+        this.notifications.success("Copia guardada en la carpeta elegida.");
     } catch (error) {
       this.fail(error, "No pudimos crear la copia. Volvé a intentarlo.");
     } finally {
@@ -86,9 +95,12 @@ export class BackupPageService {
         },
       );
       if (!confirmed) return;
+      await this.estimates.flushRecovery();
       await this.backups.restore(backup);
-      // Las pantallas conservan datos en memoria: se vuelven a leer del teléfono ya restaurado.
-      await Promise.all([this.customers.enter(), this.estimates.enter()]);
+      await Promise.all([
+        this.customers.reloadAfterRestore(),
+        this.estimates.reloadAfterRestore(),
+      ]);
       this.notifications.success("Copia restaurada.");
     } catch (error) {
       this.fail(

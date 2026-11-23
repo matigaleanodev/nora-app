@@ -24,8 +24,8 @@ import { AgendaPageService } from "../services/agenda-page.service";
   ],
   template: `<nora-page-layout
     [title]="vm.title()"
-    backLabel="Volver"
-    [busy]="vm.busy()"
+    [backLabel]="vm.screen() === 'customer' ? 'Volver a la visita' : 'Volver'"
+    [busy]="vm.busy() || vm.loading()"
     [error]="vm.error()"
     [resetKey]="vm.screen()"
     (back)="vm.back()"
@@ -33,7 +33,11 @@ import { AgendaPageService } from "../services/agenda-page.service";
     @switch (vm.screen()) {
       @case ("list") {
         @if (vm.loading()) {
-          <text class="muted">Cargando agenda…</text>
+          <text class="muted" accessibilityLiveRegion="polite"
+            >Cargando agenda…</text
+          >
+        } @else if (vm.loadError()) {
+          <nora-button text="Reintentar carga" (pressed)="vm.load()" />
         } @else if (vm.sections().length === 0) {
           <view class="task-card rounded-lg p-4 gap-2">
             <text class="section-title">Sin visitas pendientes</text>
@@ -43,7 +47,10 @@ import { AgendaPageService } from "../services/agenda-page.service";
             >
           </view>
         }
-        @for (section of vm.sections(); track section.key) {
+        @for (
+          section of vm.loading() || vm.loadError() ? [] : vm.sections();
+          track section.key
+        ) {
           <view class="gap-2">
             <text class="section-title">{{ section.title }}</text>
             @for (visit of section.items; track visit.id) {
@@ -57,7 +64,7 @@ import { AgendaPageService } from "../services/agenda-page.service";
             }
           </view>
         }
-        @if (vm.hasDone()) {
+        @if (!vm.loading() && !vm.loadError() && vm.hasDone()) {
           <nora-button
             variant="link"
             [text]="vm.showDone() ? 'Ocultar hechas' : 'Ver hechas'"
@@ -76,7 +83,7 @@ import { AgendaPageService } from "../services/agenda-page.service";
         />
         <view class="gap-2">
           <text class="field-label">Tipo</text>
-          <view class="flex-row gap-2">
+          <view class="flex-row flex-wrap gap-2">
             @for (kind of kinds; track kind.value) {
               <nora-button
                 variant="choice"
@@ -110,7 +117,7 @@ import { AgendaPageService } from "../services/agenda-page.service";
               >Presupuesto {{ vm.form().estimateNumber }}</text
             >
           }
-          <view class="flex-row gap-2">
+          <view class="flex-row flex-wrap gap-2">
             <nora-button
               variant="secondary"
               [text]="
@@ -147,22 +154,34 @@ import { AgendaPageService } from "../services/agenda-page.service";
         }
       }
       @case ("customer") {
-        <nora-field
-          label="Buscar cliente"
-          [value]="vm.search()"
-          (valueChange)="vm.search.set($event)"
-        />
-        @for (customer of vm.customerOptions(); track customer.id) {
-          <pressable
-            class="compact-row gap-1"
-            accessibilityRole="button"
-            [accessibilityLabel]="'Elegir ' + customer.name"
-            (press)="vm.pickCustomer(customer)"
+        @if (vm.customerLoading()) {
+          <text class="muted" accessibilityLiveRegion="polite"
+            >Cargando clientes…</text
           >
-            <text class="task-title">{{ customer.name }}</text>
-          </pressable>
-        } @empty {
-          <text class="muted">No hay clientes que coincidan.</text>
+        } @else if (vm.error()) {
+          <nora-button text="Reintentar carga" (pressed)="vm.loadCustomers()" />
+        } @else {
+          <nora-field
+            label="Buscar cliente"
+            [value]="vm.search()"
+            (valueChange)="vm.search.set($event)"
+          />
+          @for (customer of vm.customerOptions(); track customer.id) {
+            <pressable
+              class="compact-row gap-1"
+              accessibilityRole="button"
+              [accessibilityLabel]="'Elegir ' + customer.name"
+              (press)="vm.pickCustomer(customer)"
+            >
+              <text class="task-title">{{ customer.name }}</text>
+            </pressable>
+          } @empty {
+            <text class="muted">{{
+              vm.search()
+                ? "No hay clientes que coincidan."
+                : "No hay clientes activos."
+            }}</text>
+          }
         }
       }
     }
@@ -174,13 +193,14 @@ import { AgendaPageService } from "../services/agenda-page.service";
             text="Nueva visita"
             label="Agregar visita"
             variant="primary"
-            [disabled]="vm.loading() || vm.busy()"
+            [disabled]="vm.loading() || vm.busy() || !!vm.loadError()"
             (pressed)="vm.create()"
         /></view>
       } @else if (vm.screen() === "form") {
         <view class="form-footer px-4 py-3"
           ><nora-button
-            text="Guardar visita"
+            label="Guardar visita"
+            [text]="vm.busy() ? 'Procesando…' : 'Guardar visita'"
             variant="primary"
             [disabled]="vm.busy()"
             (pressed)="vm.save()"

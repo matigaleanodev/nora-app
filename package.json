@@ -18,7 +18,7 @@
     "@pdf-lib/fontkit": "^1.1.1",
     "@react-native-community/datetimepicker": "9.1.0",
     "@tailwindcss/cli": "^4.3.3",
-    "expo": "~57.0.32",
+    "expo": "~57.0.33",
     "expo-asset": "~57.0.21",
     "expo-crypto": "~57.0.4",
     "expo-document-picker": "~57.0.3",
@@ -27,9 +27,9 @@
     "expo-image-manipulator": "~57.0.22",
     "expo-image-picker": "~57.0.21",
     "expo-notifications": "~57.0.25",
-    "expo-sharing": "~57.0.25",
+    "expo-sharing": "~57.0.26",
     "expo-splash-screen": "~57.0.11",
-    "expo-sqlite": "~57.0.4",
+    "expo-sqlite": "~57.0.5",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "pdf-lib": "^1.17.1",
@@ -55,6 +55,15 @@
     "test": "vitest run",
     "format": "prettier . --write",
     "format:check": "prettier . --check"
+  },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-sqlite"
+        ]
+      }
+    }
   },
   "private": true
 }

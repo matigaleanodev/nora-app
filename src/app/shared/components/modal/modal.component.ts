@@ -28,22 +28,26 @@ import { ActionButtonComponent } from "../action-button/action-button.component"
     (requestClose)="cancel.emit()"
   >
     <safe-area-view class="app-screen flex-1">
-      <keyboard-avoiding-view class="flex-1" behavior="height">
+      <keyboard-avoiding-view class="flex-1" behavior="padding">
         <view class="flex-row items-center justify-between gap-3 px-4 py-3">
-          <text class="section-title">{{ title() }}</text>
+          <text class="section-title flex-1" accessibilityRole="header">{{
+            title()
+          }}</text>
           <nora-button text="Cancelar" (pressed)="cancel.emit()" />
         </view>
         <scroll-view
           class="flex-1"
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
           [contentContainerStyle]="{ padding: 16 }"
         >
           <ng-content />
-          @if (error()) {
-            <text class="error-text">{{ error() }}</text>
-          }
         </scroll-view>
-        <view class="form-footer px-4 py-3">
+        <view class="form-footer px-4 py-3 gap-2">
+          @if (error()) {
+            <text class="error-text" accessibilityLiveRegion="polite">{{
+              error()
+            }}</text>
+          }
           <nora-button
             variant="primary"
             [text]="confirmLabel()"

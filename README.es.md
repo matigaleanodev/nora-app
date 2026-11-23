@@ -47,7 +47,7 @@ Un cambio de esquema exige una migración explícita. Los formularios sin guarda
 
 **Agenda y avisos.** Solo se programan las visitas pendientes con un aviso futuro. Los avisos se programan a las 08:00 si la visita no tiene hora y 30 minutos antes si la tiene; Android puede demorar la entrega. El identificador nativo de la notificación es el UUID de la visita, por lo que reprogramar reemplaza el aviso anterior; las operaciones sobre avisos se ejecutan una por una y se concilian al iniciar, al abrir la agenda y tras restaurar una copia. El permiso de notificaciones se pide al programar el primer aviso; sin él, las visitas se guardan sin aviso. Tocar un aviso abre la visita, esperando cualquier guardado en curso y respetando las ediciones sin guardar. La sincronización con el calendario del dispositivo y los avisos de vigencia de presupuestos no están implementados. Expo Go SDK 57 admite estos avisos locales; solo el push remoto no está disponible allí.
 
-**Copia de seguridad.** `copia-nora-YYYY-MM-DD.json`, formato versión 1, con las cinco claves anteriores y un logo opcional en base64. El límite de 40 MiB por archivo rige al exportar y al importar: una exportación mayor se descarta y no se comparte. No se reemplaza nada hasta que todo el archivo valida: formato y fecha, ID y números de presupuesto únicos, reglas de dominio de cada registro y el logo, que exige un perfil de negocio, hasta 5 MiB decodificado y hasta 16 megapíxeles, y debe poder prepararse para el PDF (PNG y JPEG se decodifican con `pdf-lib`; el WebP debe convertirse con la misma conversión nativa que usa el PDF y su PNG convertido respeta el mismo tope). Restaurar pide confirmación, reemplaza todos los datos locales y reconstruye los avisos. La ruta local del logo y la marca de aviso de cada visita no se exportan. No existe copia automática ni en la nube.
+**Copia de seguridad.** Cada archivo `copia-nora-YYYY-MM-DD-<identificador>.json` usa el formato versión 1 y admite las cinco claves anteriores y un logo opcional en base64. El límite de 40 MiB rige al exportar y al importar. Antes de restaurar se validan el formato, los registros, el logo y la unicidad de identificadores y números de presupuesto. El logo requiere perfil de negocio, admite hasta 5 MiB y 16 megapíxeles y debe poder usarse en el PDF. Al confirmar, una transacción reemplaza los datos locales y luego se reconstruyen los avisos. La ruta del logo y la marca de aviso son propias de cada instalación.
 
 ## Desarrollo local
 
@@ -63,6 +63,30 @@ npm start
 Node 24 según `.nvmrc`. `npm start` abre Expo Go mediante un túnel (`expo start --go --tunnel`); `npm run android` inicia Metro y solicita un dispositivo o emulador, por lo que ADB debe ser accesible y el teléfono debe llegar a Metro. Expo Go requiere un SDK compatible y los módulos nativos incluidos; de lo contrario, usá un development build. Estos comandos no generan un APK release firmado.
 
 Punto de entrada: `src/main.ts`; componente raíz: `src/app/app.ts`; metadatos: `app.json`. Las pruebas corren sobre un host nativo simulado y simulan SQLite, Crypto, Sharing, FileSystem y Notifications, por lo que no prueban el comportamiento en un dispositivo. CI ejecuta formato, tipos, pruebas y la exportación de Android.
+
+## APK Android
+
+Para distribución interna, vinculá el proyecto a EAS y ejecutá `npx eas-cli build --platform android --profile preview`. EAS administra la firma de Android. Conservá el paquete `dev.matiasgaleano.nora` y la misma clave al actualizar, y aumentá `android.versionCode` para cada versión que distribuyas.
+
+Para una compilación local de prueba, usá Node 24, JDK 21 y un Android SDK con API 36, Build Tools 36.0.0, NDK 27.1.12297006 y 27.0.12077973, y CMake 3.22.1. Nora compila SQLite desde fuente para incluir su biblioteca nativa en las dos arquitecturas del APK. Configurá `JAVA_HOME` y `ANDROID_HOME` y ejecutá:
+
+```bash
+npm ci
+npx expo prebuild --platform android
+cd android
+./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+En PowerShell, usá `.\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,x86_64'`. El APK local usa la firma de prueba del proyecto generado por Expo. Para distribuirlo, usá el perfil `preview` o firmalo con una clave privada que puedas conservar para las actualizaciones. El APK incluye el código y los recursos de Nora y funciona sin Metro ni Expo Go.
+
+Verificá con `jar tf app/build/outputs/apk/release/app-release.apk` que figuren `lib/arm64-v8a/libexpo-sqlite.so` y `lib/x86_64/libexpo-sqlite.so`.
+
+1. Instalá el APK y abrí **Mi negocio** desde Inicio para guardar tu nombre y, si querés, tus datos de contacto y logo.
+2. Registrá un cliente y sus direcciones. Desde **Presupuestos**, cargá materiales y mano de obra, revisá el borrador y compartí el PDF. El estado se cambia manualmente.
+3. En **Agenda**, guardá una visita futura y concedé el permiso de notificaciones si querés recibir avisos.
+4. Antes de cambiar de teléfono, desinstalar o cambiar de firma, entrá en **Copia de seguridad → Guardar copia**, elegí una carpeta y conservá el JSON fuera de Nora. También podés usar **Compartir copia**. Las instalaciones de Expo Go tienen su propio almacenamiento. Para trasladar esos datos, hacé la copia desde Expo Go y abrila en la app instalada.
+5. Para recuperar datos, abrí **Copia de seguridad → Elegir archivo**, seleccioná el JSON y comprobá su resumen antes de confirmar. Restaurar reemplaza los registros de este teléfono.
 
 ## Documentación
 

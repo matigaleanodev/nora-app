@@ -1,3 +1,4 @@
+import { createMemoryStorage } from "../../shared/testing/memory-storage";
 import { render } from "@ng-native/testing";
 import { expect, test, vi } from "vitest";
 import { EstimatesPageComponent } from "../pages/estimates-page.component";
@@ -13,25 +14,11 @@ import {
 } from "../../shared/testing/domain-fixtures";
 const KEY = "estimate-recovery.v1";
 function localStore() {
-  const records = new Map<string, unknown>();
-  const storage = new LocalStorageService();
-  vi.spyOn(storage, "read").mockImplementation(
-    async <T>(key: string) =>
-      structuredClone(records.get(key) ?? null) as T | null,
-  );
-  const write = vi
-    .spyOn(storage, "write")
-    .mockImplementation(async <T>(key: string, value: T) => {
-      records.set(key, structuredClone(value));
-    });
-  return { storage, write, records };
+  const store = createMemoryStorage();
+  store.records.set("estimates.v1", [estimateFixture]);
+  return store;
 }
 async function setup(local = localStore()) {
-  const create = vi.fn().mockImplementation(async (input, id) => ({
-    ...estimateFixture,
-    ...input,
-    id: id ?? estimateFixture.id,
-  }));
   const result = await render(EstimatesPageComponent, {
     providers: [
       { provide: LocalStorageService, useValue: local.storage },
@@ -42,20 +29,20 @@ async function setup(local = localStore()) {
         },
       },
       {
-        provide: EstimatesService,
-        useValue: {
-          getAll: async () => [estimateFixture],
-          create,
-          update: async (id: string) => ({ ...estimateFixture, id }),
-        },
-      },
-      {
         provide: CustomersService,
-        useValue: { getAll: async () => [customerFixture] },
+        useValue: {
+          getAll: async () => [customerFixture],
+          getById: async (id: string) =>
+            id === customerFixture.id ? customerFixture : undefined,
+        },
       },
     ],
   });
   const vm = result.componentRef.injector.get(EstimatesPageService);
+  const create = vi.spyOn(
+    result.componentRef.injector.get(EstimatesService),
+    "create",
+  );
   await vi.waitFor(() => expect(vm.loading()).toBe(false));
   return { ...local, result, vm, create };
 }
@@ -86,7 +73,7 @@ test("conserva texto incompleto y un editor separado después de desmontar y rea
 test("serializa escrituras y no anuncia guardado cuando una versión nueva sigue pendiente", async () => {
   const { vm, write, records } = await setup();
   let release!: () => void;
-  write.mockImplementationOnce(async <T>(key: string, value: T) => {
+  write.mockImplementationOnce(async (key, value) => {
     await new Promise<void>((resolve) => {
       release = resolve;
     });
@@ -135,6 +122,18 @@ test("volver desde el editor conserva su recuperación y cancelar descarta sólo
   expect(vm.form().items).toEqual(original);
   expect(vm.recoveries()[0].editor).toBeNull();
 });
+test("cancelar el único editor de un borrador nuevo elimina su recuperación vacía", async () => {
+  const { vm, records } = await setup();
+  vm.create();
+  vm.addItem();
+  vm.updateEditor({ price: "20," });
+  await vi.waitFor(() => expect(vm.saveState()).toBe("saved"));
+  expect(vm.recoveries()).toHaveLength(1);
+  vm.cancelItem();
+  await vi.waitFor(() => expect(vm.saveState()).toBe("idle"));
+  expect(records.get(KEY)).toEqual([]);
+  expect(vm.recoveries()).toEqual([]);
+});
 test("carga repetida incorpora sólo renglones válidos y mantiene listo el mismo tipo", async () => {
   const { vm } = await setup();
   vm.create();
@@ -163,6 +162,32 @@ test("revisar mantiene el identificador de recuperación y no duplica el documen
     id,
   );
   expect(vm.selected()?.id).toBe(id);
+  expect(records.get(KEY)).toEqual([]);
+});
+
+test("si falla la limpieza de recuperación, revisar revierte el nuevo presupuesto y permite reintentar", async () => {
+  const { vm, records, write } = await setup();
+  vm.create();
+  vm.updateForm({
+    number: "P-999",
+    description: "Trabajo",
+    clientId: customerFixture.id,
+  });
+  await vi.waitFor(() => expect(vm.saveState()).toBe("saved"));
+  const before = records.get(KEY);
+  const id = vm.recoveries()[0].id;
+  write.mockImplementationOnce(async (key, value) => {
+    records.set(key, value);
+  });
+  write.mockRejectedValueOnce(new Error("Disco lleno"));
+  await vm.save();
+  expect(vm.screen()).toBe("form");
+  expect(vm.error()).toBe("Disco lleno");
+  expect(records.get("estimates.v1")).toEqual([estimateFixture]);
+  expect(records.get(KEY)).toEqual(before);
+  await vm.save();
+  expect(vm.selected()?.id).toBe(id);
+  expect(records.get("estimates.v1")).toHaveLength(2);
   expect(records.get(KEY)).toEqual([]);
 });
 

@@ -22,21 +22,29 @@ import { BusinessPageService } from "../services/business-page.service";
     (back)="vm.close()"
   >
     @if (vm.loading()) {
-      <text class="muted">Cargando tus datos…</text>
-    }
-    <nora-business-form
-      [form]="vm.form()"
-      [disabled]="vm.blocked()"
-      (changed)="vm.update($event)"
-      (chooseLogo)="vm.pickLogo()"
-    />
-    @if (vm.blocked() && !vm.loading() && !vm.busy()) {
+      <text class="muted" accessibilityLiveRegion="polite"
+        >Cargando tus datos…</text
+      >
+    } @else if (vm.blocked() && !vm.busy()) {
       <nora-button text="Reintentar carga" (pressed)="vm.load()" />
+    } @else {
+      <nora-business-form
+        [form]="vm.form()"
+        [disabled]="vm.blocked()"
+        (changed)="vm.update($event)"
+        (chooseLogo)="vm.pickLogo()"
+      />
     }
     <view page-footer class="form-footer px-4 py-3">
       <nora-button
         variant="primary"
-        [text]="vm.busy() ? 'Guardando…' : 'Guardar datos'"
+        [text]="
+          vm.choosingLogo()
+            ? 'Seleccionando logo…'
+            : vm.busy()
+              ? 'Guardando…'
+              : 'Guardar datos'
+        "
         label="Guardar datos del negocio"
         [disabled]="vm.blocked()"
         (pressed)="vm.save()"

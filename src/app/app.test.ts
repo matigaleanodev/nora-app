@@ -1,3 +1,4 @@
+import { createMemoryStorage } from "./shared/testing/memory-storage";
 import { render, screen, userEvent, fireEvent } from "@ng-native/testing";
 import { expect, test, vi } from "vitest";
 import { App } from "./app";
@@ -12,8 +13,11 @@ import { LocalStorageService } from "./core/storage/local-storage.service";
 async function setup(failWrite = false) {
   const storage = {
     read: vi.fn().mockResolvedValue(null),
-    update: async <T>(key: string, change: (value: T | null) => T) => {
-      await storage.write(key, change(null));
+    update: async <T>(
+      key: string,
+      change: (value: T | null) => T | Promise<T>,
+    ) => {
+      await storage.write(key, await change(null));
     },
     write: failWrite
       ? vi.fn().mockRejectedValue(new Error("disk unavailable"))
@@ -58,17 +62,8 @@ test("inicia en Inicio y permite navegar entre las tres pestañas", async () => 
 });
 
 test("conecta los CRUD reales al storage y conserva formularios al cambiar de pestaña", async () => {
-  const records = new Map<string, unknown>();
-  const storage = new LocalStorageService();
-  vi.spyOn(storage, "read").mockImplementation(
-    async <T>(key: string) =>
-      structuredClone(records.get(key) ?? null) as T | null,
-  );
-  vi.spyOn(storage, "write").mockImplementation(
-    async <T>(key: string, value: T) => {
-      records.set(key, structuredClone(value));
-    },
-  );
+  const { storage, records } = createMemoryStorage();
+
   let nextId = 0;
   const result = await render(App, {
     providers: [
@@ -235,8 +230,11 @@ async function setupReminders() {
   const confirm = vi.fn().mockResolvedValue(true);
   const storage = {
     read: vi.fn(async (key: string) => (key === "visits.v1" ? [visit] : null)),
-    update: async <T>(key: string, change: (value: T | null) => T) => {
-      await storage.write(key, change(null));
+    update: async <T>(
+      key: string,
+      change: (value: T | null) => T | Promise<T>,
+    ) => {
+      await storage.write(key, await change(null));
     },
     write: vi.fn(async (key: string, _value?: unknown) => {
       await gates.get(key)?.promise;

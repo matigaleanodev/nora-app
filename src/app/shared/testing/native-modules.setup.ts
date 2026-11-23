@@ -14,7 +14,8 @@ vi.mock("expo-notifications", () => ({
   cancelAllScheduledNotificationsAsync: vi.fn(async () => undefined),
   setNotificationChannelAsync: vi.fn(async () => null),
   setNotificationHandler: vi.fn(),
-  getLastNotificationResponseAsync: vi.fn(async () => null),
+  getLastNotificationResponse: vi.fn(() => null),
+  clearLastNotificationResponse: vi.fn(),
   addNotificationResponseReceivedListener: vi.fn(() => ({ remove: vi.fn() })),
 }));
 

@@ -15,21 +15,32 @@ import { BackupPageService } from "../services/backup-page.service";
     (back)="vm.close()"
   >
     <text class="body-text"
-      >Tus clientes, presupuestos y datos del negocio viven sólo en este
-      teléfono. Guardá una copia en un lugar seguro por si lo perdés, lo cambiás
+      >Tus clientes, presupuestos, visitas y datos del negocio se guardan en
+      este teléfono. Guardá una copia en otro lugar por si lo perdés, lo cambiás
       o reinstalás Nora.</text
     >
+    @if (vm.busy()) {
+      <text class="muted" accessibilityLiveRegion="polite"
+        >Procesando copia de seguridad…</text
+      >
+    }
     <view class="task-card rounded-lg p-4 gap-3">
       <text class="section-title">Guardar copia</text>
       <text class="muted"
-        >Crea un archivo con todos tus datos y el logo. Después elegís dónde
-        guardarlo o a quién enviarlo.</text
+        >Elegí una carpeta del teléfono o compartí el archivo con otra
+        aplicación.</text
       >
       <nora-button
         variant="primary"
         text="Guardar copia"
         [disabled]="vm.busy()"
-        (pressed)="vm.save()"
+        (pressed)="vm.save('folder')"
+      />
+      <nora-button
+        variant="secondary"
+        text="Compartir copia"
+        [disabled]="vm.busy()"
+        (pressed)="vm.save('share')"
       />
       @if (vm.lastCopy()) {
         <text class="footnote">Última copia creada: {{ vm.lastCopy() }}</text>

@@ -47,7 +47,7 @@ A schema change requires an explicit migration. Unsaved forms survive tab change
 
 **Agenda and reminders.** Only pending visits with a future reminder are scheduled. Reminders are scheduled for 08:00 on visits without a time and 30 minutes before otherwise; Android may delay delivery. The native notification identifier is the visit UUID, so rescheduling replaces the previous one; operations on reminders run one at a time and are reconciled on startup, when opening the agenda and after a restore. Notification permission is requested when the first reminder is scheduled; without it, visits are saved without a reminder. Tapping a reminder opens the visit, waiting for any save in progress and respecting unsaved edits. Device calendar sync and estimate-validity reminders are not implemented. Expo Go SDK 57 supports these local reminders; only remote push is unavailable there.
 
-**Backup.** `copia-nora-YYYY-MM-DD.json`, format version 1, containing the five keys above and an optional base64 logo. The 40 MiB file limit applies to export and import: a larger export is discarded and never shared. Nothing is replaced until the whole file validates: format and date, unique IDs and estimate numbers, the domain rules of every record, and the logo, which requires a business profile, at most 5 MiB decoded and at most 16 megapixels, and must be preparable for the PDF (PNG and JPEG are decoded with `pdf-lib`; WebP must convert with the same native conversion the PDF uses, and its converted PNG obeys the same cap). Restoring asks for confirmation, replaces all local data and rebuilds the reminders. The local logo path and each visit's reminder marker are not exported. There is no automatic or cloud backup.
+**Backup.** Each `copia-nora-YYYY-MM-DD-<identifier>.json` file uses format version 1 and supports the five keys above and an optional base64 logo. The 40 MiB limit applies to export and import. Before restoring, Nora validates the format, records, logo and uniqueness of IDs and estimate numbers. The logo requires a business profile, is limited to 5 MiB and 16 megapixels, and must work in the PDF. After confirmation, a transaction replaces the local data and Nora rebuilds reminders. The logo path and reminder marker are specific to each installation.
 
 ## Local development
 
@@ -63,6 +63,30 @@ npm start
 Node 24 as pinned by `.nvmrc`. `npm start` opens Expo Go over a tunnel (`expo start --go --tunnel`); `npm run android` starts Metro and requests a device or emulator, so ADB must be reachable and the phone must reach Metro. Expo Go needs a matching SDK and included native modules; otherwise use a development build. These commands do not produce a signed release APK.
 
 Entry point: `src/main.ts`; root component: `src/app/app.ts`; metadata: `app.json`. Tests run on a simulated native host and mock SQLite, Crypto, Sharing, FileSystem and Notifications, so they do not prove behavior on a device. CI runs formatting, types, tests and the Android export.
+
+## Android APK
+
+For internal distribution, link the project to EAS and run `npx eas-cli build --platform android --profile preview`. EAS manages Android signing. Keep the `dev.matiasgaleano.nora` package and the same signing key across updates, and increase `android.versionCode` for each distributed version.
+
+For a local test build, use Node 24, JDK 21 and an Android SDK with API 36, Build Tools 36.0.0, NDK 27.1.12297006 and 27.0.12077973, and CMake 3.22.1. Nora builds SQLite from source to include its native library for both APK architectures. Set `JAVA_HOME` and `ANDROID_HOME`, then run:
+
+```bash
+npm ci
+npx expo prebuild --platform android
+cd android
+./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+In PowerShell, use `.\gradlew.bat :app:assembleRelease '-PreactNativeArchitectures=arm64-v8a,x86_64'`. The local APK uses the generated Expo project's test signing key. For distribution, use the `preview` profile or sign the APK with a private key you can retain for updates. The APK contains Nora's code and assets and runs independently of Metro and Expo Go.
+
+Use `jar tf app/build/outputs/apk/release/app-release.apk` to verify that it includes `lib/arm64-v8a/libexpo-sqlite.so` and `lib/x86_64/libexpo-sqlite.so`.
+
+1. Install the APK and open **Mi negocio** from Home to save your name, optional contact information and logo.
+2. Add a customer and their addresses. In **Presupuestos**, add materials and labor, review the draft and share the PDF. Change the estimate status manually.
+3. In **Agenda**, save a future visit and grant notification permission to receive reminders.
+4. Before changing phones, uninstalling or changing signing keys, select **Copia de seguridad → Guardar copia**, choose a folder and keep the JSON file outside Nora. You can also use **Compartir copia** to share it. Expo Go uses its own storage. To transfer that data, export a backup from Expo Go and open it in the installed app.
+5. To recover your data, open **Copia de seguridad → Elegir archivo**, select the JSON file and check its summary before confirming. Restoring replaces the records on this phone.
 
 ## Documentation
 

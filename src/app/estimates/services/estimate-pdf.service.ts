@@ -130,15 +130,15 @@ export class EstimatePdfService {
       throw new Error(
         "No pudimos leer tu logo. Volvé a elegirlo en Mi negocio.",
       );
-    if (logo.mimeType !== "image/webp")
-      return {
-        bytes: await file.bytes(),
-        mimeType: logo.mimeType as "image/png" | "image/jpeg",
-      };
-    return {
-      bytes: await convertWebpToPng(file.uri),
-      mimeType: "image/png",
-    };
+    try {
+      return logo.mimeType === "image/webp"
+        ? { bytes: await convertWebpToPng(file.uri), mimeType: "image/png" }
+        : { bytes: await file.bytes(), mimeType: logo.mimeType };
+    } catch {
+      throw new Error(
+        "No pudimos leer tu logo. Volvé a elegirlo en Mi negocio.",
+      );
+    }
   }
   private removeExpired(directory: Directory, FileType: typeof File): void {
     try {

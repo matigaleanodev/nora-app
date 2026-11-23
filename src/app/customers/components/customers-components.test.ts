@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, userEvent } from "@ng-native/testing";
+import { Dialogs } from "@ng-native/device";
 import { expect, test, vi } from "vitest";
 import { CustomersListComponent } from "./customers-list.component";
 import { CustomersDetailComponent } from "./customers-detail.component";
@@ -61,6 +62,9 @@ test("el formulario emite cambios y acciones de dirección sin mutar sus inputs"
   expect(changed).toHaveBeenCalledWith({ name: "Ana López" });
   expect(form.name).toBe("Ana");
   expect(addressAdded).not.toHaveBeenCalled();
+  expect(
+    screen.queryByRole("button", { name: "Quitar dirección 1" }),
+  ).toBeNull();
   await fireEvent.changeText(
     screen.getByLabelText("Nombre de dirección *"),
     "Casa",
@@ -77,7 +81,7 @@ test("el editor de dirección emite campos y eliminación sin reemplazar el UUID
   const removed = vi.fn();
   const address = customerFixture.addresses[0];
   await render(CustomerAddressEditorComponent, {
-    inputs: { address, index: 0 },
+    inputs: { address, index: 0, removable: true },
     on: { changed, removed },
   });
   await fireEvent.changeText(screen.getByLabelText("Altura"), "456");
@@ -87,6 +91,39 @@ test("el editor de dirección emite campos y eliminación sin reemplazar el UUID
   expect(changed).toHaveBeenCalledWith({ streetNumber: "456" });
   expect(removed).toHaveBeenCalledOnce();
   expect(address.streetNumber).toBe("123");
+});
+test("quitar una dirección existente pide confirmación antes de cambiar el cliente", async () => {
+  const addressRemoved = vi.fn();
+  const confirm = vi
+    .fn()
+    .mockResolvedValueOnce(false)
+    .mockResolvedValueOnce(true);
+  await render(CustomersFormComponent, {
+    inputs: {
+      form: {
+        name: "Ana",
+        areaCode: "",
+        phoneNumber: "",
+        whatsapp: true,
+        email: "",
+        notes: "",
+        addresses: customerFixture.addresses,
+      },
+    },
+    on: { addressRemoved },
+    providers: [{ provide: Dialogs, useValue: { confirm } }],
+  });
+  await userEvent.press(
+    screen.getByRole("button", { name: "Editar dirección 1" }),
+  );
+  await userEvent.press(
+    screen.getByRole("button", { name: "Quitar dirección 1" }),
+  );
+  expect(addressRemoved).not.toHaveBeenCalled();
+  await userEvent.press(
+    screen.getByRole("button", { name: "Quitar dirección 1" }),
+  );
+  expect(addressRemoved).toHaveBeenCalledWith(0);
 });
 test("la tarjeta de dirección admite piso y departamento opcionales", async () => {
   await render(CustomerAddressCardComponent, {

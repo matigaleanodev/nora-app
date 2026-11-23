@@ -12,6 +12,10 @@ import {
   type EstimateInput,
 } from "../models/estimate.model";
 import { calculateEstimateTotal } from "../utils/estimate-totals";
+import {
+  ESTIMATE_RECOVERY_KEY,
+  readEstimateRecoveries,
+} from "./estimate-recovery.service";
 
 export const ESTIMATES_STORAGE_KEY = "estimates.v1";
 const STORAGE_KEY = ESTIMATES_STORAGE_KEY;
@@ -27,31 +31,37 @@ export class EstimatesService {
     return (await this.getAll()).find((estimate) => estimate.id === id);
   }
   async create(input: EstimateInput, stableId?: string): Promise<Estimate> {
-    if (stableId) assertUuid(stableId);
-    const data = await this.prepare(input);
-    const now = new Date().toISOString();
-    const estimate: Estimate = {
-      ...data,
-      id: stableId ?? (await this.ids.create()),
-      createdAt: now,
-      updatedAt: now,
-      status: EstimateStatus.Draft,
-    };
-    await this.storage.update<Estimate[]>(STORAGE_KEY, (current) => {
-      if (current?.some((record) => record.id === estimate.id))
+    if (stableId !== undefined) assertUuid(stableId);
+    let estimate!: Estimate;
+    await this.writeDraft(stableId, async (current) => {
+      const data = await this.prepare(input);
+      const id = stableId ?? (await this.ids.create());
+      if (current?.some((record) => record.id === id))
         throw new Error(
           "El presupuesto ya existe. Volvé a abrirlo desde la lista.",
         );
-      this.checkNumber(current ?? [], estimate.number);
+      this.checkNumber(current ?? [], data.number);
+      const now = new Date().toISOString();
+      estimate = {
+        ...data,
+        id,
+        createdAt: now,
+        updatedAt: now,
+        status: EstimateStatus.Draft,
+      };
       return [...(current ?? []), estimate];
     });
     return estimate;
   }
   /** Edita sólo borradores y vuelve a copiar los datos actuales del cliente y la dirección. */
-  async update(id: string, input: EstimateInput): Promise<Estimate> {
-    const data = await this.prepare(input);
+  async update(
+    id: string,
+    input: EstimateInput,
+    recoveryId?: string,
+  ): Promise<Estimate> {
     let result!: Estimate;
-    await this.storage.update<Estimate[]>(STORAGE_KEY, (current) => {
+    await this.writeDraft(recoveryId, async (current) => {
+      const data = await this.prepare(input);
       const estimate = current?.find((value) => value.id === id);
       if (!estimate || estimate.status !== EstimateStatus.Draft)
         throw new Error("Sólo se pueden editar borradores.");
@@ -60,6 +70,22 @@ export class EstimatesService {
       return current!.map((value) => (value.id === id ? result : value));
     });
     return result;
+  }
+
+  private writeDraft(
+    recoveryId: string | undefined,
+    change: (current: Estimate[] | null) => Promise<Estimate[]>,
+  ): Promise<void> {
+    if (!recoveryId) return this.storage.update(STORAGE_KEY, change);
+    return this.storage.updateMany(
+      [STORAGE_KEY, ESTIMATE_RECOVERY_KEY],
+      async (read) => ({
+        [STORAGE_KEY]: await change(await read<Estimate[]>(STORAGE_KEY)),
+        [ESTIMATE_RECOVERY_KEY]: readEstimateRecoveries(
+          await read(ESTIMATE_RECOVERY_KEY),
+        ).filter((record) => record.id !== recoveryId),
+      }),
+    );
   }
   /**
    * Registra el avance borrador → enviado → aceptado/rechazado, sin modificar el snapshot.
@@ -132,7 +158,7 @@ export class EstimatesService {
           !Object.values(MeasurementUnit).includes(item.unit)
         )
           throw new Error("Material o tarea inválidos.");
-        if (item.id) assertUuid(item.id);
+        if (item.id !== undefined) assertUuid(item.id);
         return {
           ...item,
           description: item.description.trim(),

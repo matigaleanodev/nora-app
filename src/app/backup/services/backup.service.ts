@@ -11,16 +11,20 @@ import {
   MAX_BACKUP_BYTES,
   parseBackup,
   summarizeBackup,
+  validateBackup,
   type BackupFile,
   type BackupLogo,
   type BackupSummary,
 } from "../models/backup-file";
-import type { Visit } from "../../agenda/models/visit.model";
-import { VISITS_STORAGE_KEY } from "../../agenda/services/visits.service";
 import { convertWebpToPng } from "../../shared/utils/webp-to-png";
-import { canEmbed, isUsableLogo, type LogoMime } from "../models/logo-image";
+import {
+  canEmbed,
+  isUsableLogo,
+  type LogoMime,
+} from "../../business/utils/logo-image";
 
 const pad = (value: number): string => String(value).padStart(2, "0");
+const CACHE_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 /** Exporta e importa todos los datos locales como un único archivo JSON versionado. */
 @Injectable({ providedIn: "root" })
@@ -45,36 +49,72 @@ export class BackupService {
     return summary;
   }
 
+  async saveToFolder(): Promise<BackupSummary | null> {
+    const { Directory } = await import("expo-file-system");
+    let folder: InstanceType<typeof Directory>;
+    try {
+      folder = await Directory.pickDirectoryAsync();
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code === "ERR_PICKER_CANCELLED"
+      )
+        return null;
+      throw error;
+    }
+
+    const { file, summary } = await this.create();
+    let saved: File | undefined;
+    try {
+      const bytes = await file.bytes();
+      saved = folder.createFile(file.name, "application/json");
+      saved.write(bytes);
+      if (!saved.exists || saved.size !== bytes.length)
+        throw new Error(
+          "La copia no se guardó completa. Elegí otra carpeta o volvé a intentarlo.",
+        );
+    } catch (error) {
+      if (saved) this.removeFile(saved);
+      throw error;
+    } finally {
+      this.removeFile(file);
+    }
+    return summary;
+  }
+
   async create(now: Date = new Date()): Promise<{
     file: File;
     summary: BackupSummary;
   }> {
-    const data: Record<string, unknown> = {
-      ...(await this.storage.readMany(BACKUP_KEYS)),
-    };
-    let logo: BackupLogo | undefined;
-    const profile = data[BUSINESS_PROFILE_KEY] as BusinessProfile | undefined;
-    if (profile?.logo) {
-      const base64 = await this.logos.readBase64(profile.logo);
-      // Un logo que la importación rechazaría no se incluye: la copia siempre se puede restaurar.
-      if (base64 && (await this.isUsable(profile.logo.mimeType, base64)))
-        logo = { mimeType: profile.logo.mimeType, base64 };
-      const { logo: _local, ...rest } = profile;
-      data[BUSINESS_PROFILE_KEY] = rest;
-    }
-    // El marcador de aviso es local de cada teléfono: la importación lo reconstruye.
-    const visits = data[VISITS_STORAGE_KEY] as Visit[] | undefined;
-    if (visits)
-      data[VISITS_STORAGE_KEY] = visits.map(
-        ({ reminderId: _local, ...rest }) => rest,
-      );
-    const backup = buildBackup(data, logo, now);
+    const { data, base64, mimeType } = await this.storage.readMany(
+      BACKUP_KEYS,
+      async (data) => {
+        const profile = data[BUSINESS_PROFILE_KEY] as
+          BusinessProfile | undefined;
+        const logo = profile?.logo;
+        return {
+          data,
+          mimeType: logo?.mimeType,
+          base64: logo ? await this.logos.readBase64(logo) : undefined,
+        };
+      },
+    );
+    // El logo se lee junto con sus datos; la conversión no retrasa otras escrituras.
+    const logo: BackupLogo | undefined =
+      base64 && mimeType && (await this.isUsable(mimeType, base64))
+        ? { mimeType, base64 }
+        : undefined;
+    const backup = validateBackup(buildBackup(data, logo, now));
     const { Directory, File, Paths } = await import("expo-file-system");
     const directory = new Directory(Paths.cache, "backups");
     directory.create({ idempotent: true, intermediates: true });
-    this.clean(directory);
+    this.removeExpired(directory, File);
     const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    const file = new File(directory, `copia-nora-${date}.json`);
+    const file = new File(
+      directory,
+      `copia-nora-${date}-${Date.now()}-${Math.random().toString(36).slice(2)}.json`,
+    );
     const content = JSON.stringify(backup);
     try {
       file.write(content);
@@ -88,7 +128,7 @@ export class BackupService {
           "La copia supera los 40 MiB y no se podría restaurar, así que no la compartimos.",
         );
     } catch (error) {
-      if (file.exists) file.delete();
+      this.removeFile(file);
       throw error;
     }
     return { file, summary: summarizeBackup(backup) };
@@ -133,12 +173,13 @@ export class BackupService {
    * y el anterior se elimina después, de modo que un fallo no deja el perfil apuntando a un archivo ausente.
    */
   async restore(backup: BackupFile): Promise<void> {
-    await this.assertLogoUsable(backup);
-    const previous = (await this.storage.readMany([BUSINESS_PROFILE_KEY]))[
-      BUSINESS_PROFILE_KEY
-    ] as BusinessProfile | undefined;
+    if (!this.verified.has(backup)) {
+      backup = validateBackup(backup);
+      await this.assertLogoUsable(backup);
+    }
     const entries: Record<string, unknown> = { ...backup.data };
     let restored: BusinessProfile["logo"];
+    let oldLogo: BusinessProfile["logo"];
     if (backup.logo) {
       restored = await this.logos.restore(
         backup.logo.base64,
@@ -150,18 +191,25 @@ export class BackupService {
       };
     }
     try {
-      await this.storage.replaceMany(BACKUP_KEYS, entries);
+      await this.storage.updateMany(BACKUP_KEYS, async (read) => {
+        try {
+          oldLogo = (await read<BusinessProfile>(BUSINESS_PROFILE_KEY))?.logo;
+        } catch (error) {
+          // Un perfil dañado puede reemplazarse; su logo anterior se deja intacto.
+          if (!(error instanceof SyntaxError)) throw error;
+        }
+        return entries;
+      });
     } catch (error) {
       await this.logos.removeOwned(restored);
       throw error;
     }
-    await this.logos.removeOwned(previous?.logo);
+    await this.logos.removeOwned(oldLogo);
     await this.rescheduleReminders();
   }
 
   /** Un logo que no se puede decodificar tampoco serviría para el PDF: se rechaza antes de tocar los datos. */
   private async assertLogoUsable(backup: BackupFile): Promise<void> {
-    if (this.verified.has(backup)) return;
     if (
       backup.logo &&
       !(await this.isUsable(backup.logo.mimeType, backup.logo.base64))
@@ -211,11 +259,29 @@ export class BackupService {
     }
   }
 
-  private clean(directory: import("expo-file-system").Directory): void {
+  private removeExpired(
+    directory: import("expo-file-system").Directory,
+    FileClass: typeof File,
+  ): void {
     try {
-      for (const entry of directory.list()) entry.delete();
+      const cutoff = Date.now() - CACHE_LIFETIME_MS;
+      for (const entry of directory.list())
+        if (
+          entry instanceof FileClass &&
+          entry.lastModified !== null &&
+          entry.lastModified < cutoff
+        )
+          this.removeFile(entry);
     } catch {
       /* Copias antiguas en la caché no impiden crear la nueva. */
+    }
+  }
+
+  private removeFile(file: File): void {
+    try {
+      if (file.exists) file.delete();
+    } catch {
+      /* La caché puede limpiarse en otra exportación. */
     }
   }
 }

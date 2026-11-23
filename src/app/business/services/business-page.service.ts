@@ -33,12 +33,14 @@ export class BusinessPageService {
   private readonly formState = signal<BusinessForm>(toForm(null));
   private readonly baseline = signal("");
   private readonly working = signal(false);
+  private readonly picking = signal(false);
   private readonly reading = signal(false);
   private readonly errorState = signal("");
   private readonly loadFailed = signal(false);
   readonly visible = this.shown.asReadonly();
   readonly form = this.formState.asReadonly();
   readonly busy = this.working.asReadonly();
+  readonly choosingLogo = this.picking.asReadonly();
   readonly loading = this.reading.asReadonly();
   readonly error = this.errorState.asReadonly();
   readonly blocked = computed(
@@ -61,6 +63,11 @@ export class BusinessPageService {
       const form = toForm(await this.profiles.get());
       this.formState.set(form);
       this.baseline.set(JSON.stringify(form));
+      const recovered = await this.logos.recoverPending().catch(() => {
+        this.notifications.warning("No pudimos recuperar el logo elegido.");
+        return null;
+      });
+      if (recovered) this.formState.set({ ...form, logo: recovered });
     } catch {
       this.loadFailed.set(true);
       this.errorState.set("No pudimos cargar los datos de tu negocio.");
@@ -75,12 +82,14 @@ export class BusinessPageService {
   async pickLogo(): Promise<void> {
     if (this.blocked()) return;
     this.working.set(true);
+    this.picking.set(true);
     try {
       const logo = await this.logos.pick();
       if (logo) this.formState.update((form) => ({ ...form, logo }));
     } catch (error) {
       this.fail(error);
     } finally {
+      this.picking.set(false);
       this.working.set(false);
     }
   }

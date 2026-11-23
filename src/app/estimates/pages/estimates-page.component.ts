@@ -1,7 +1,7 @@
 import { EstimateItemEditorComponent } from "../components/estimate-item-editor.component";
 import { EstimateConditionsComponent } from "../components/estimate-conditions.component";
 import { MoneyPipe } from "../../shared/pipes/money.pipe";
-import { Component, DestroyRef, inject } from "@angular/core";
+import { Component, DestroyRef, inject, viewChild } from "@angular/core";
 import { Text, View } from "@ng-native/components";
 import { PageLayoutComponent } from "../../shared/components/page-layout/page-layout.component";
 import { ActionButtonComponent } from "../../shared/components/action-button/action-button.component";
@@ -10,6 +10,10 @@ import { EstimatesListComponent } from "../components/estimates-list.component";
 import { EstimatesDetailComponent } from "../components/estimates-detail.component";
 import { EstimatesFormComponent } from "../components/estimates-form.component";
 import { EstimatesCustomerPickerComponent } from "../components/estimates-customer-picker.component";
+import {
+  calendarDateFromLocal,
+  formatCalendarDate,
+} from "../../shared/utils/calendar-date";
 @Component({
   selector: "nora-estimates",
   imports: [
@@ -41,6 +45,7 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
             [statusFilter]="vm.statusFilter()"
             (statusFilterChange)="vm.statusFilter.set($event)"
             [rows]="vm.listRows()"
+            [hasRecoveries]="vm.visibleRecoveries().length > 0"
             [statusLabels]="vm.statusLabels"
             [loading]="vm.loading()"
             [error]="vm.error()"
@@ -49,7 +54,12 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
             (searchChange)="vm.search.set($event)"
             (retry)="vm.enter()"
           />
-          @for (recovery of vm.visibleRecoveries(); track recovery.id) {
+          @for (
+            recovery of vm.loading() || vm.error()
+              ? []
+              : vm.visibleRecoveries();
+            track recovery.id
+          ) {
             <view class="compact-row gap-2">
               <text class="body-text">{{
                 recovery.form.number || "Presupuesto sin completar"
@@ -58,7 +68,7 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
                 >{{
                   recovery.form.description || "Faltan datos para revisar"
                 }}
-                · {{ recovery.updatedAt }}</text
+                · {{ formatRecoveryDate(recovery.updatedAt) }}</text
               >
               <nora-button
                 text="Continuar edición"
@@ -118,9 +128,6 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
               [busy]="vm.busy()"
               (changed)="vm.updateEditor($event)"
             />
-            @if (vm.editorError()) {
-              <text class="error-text">{{ vm.editorError() }}</text>
-            }
           } @else if (vm.choosingCustomer()) {
             <nora-estimates-customer-picker
               [customers]="vm.customerChoices()"
@@ -184,24 +191,39 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
                 (pressed)="vm.back()"
               />
             } @else if (vm.activeEditor(); as editor) {
+              @if (vm.editorError()) {
+                <text class="error-text" accessibilityLiveRegion="polite">{{
+                  vm.editorError()
+                }}</text>
+              }
               <nora-button
                 variant="primary"
                 [text]="editor.index === null ? 'Agregar' : 'Guardar cambios'"
+                [disabled]="vm.busy()"
                 (pressed)="vm.confirmItem()"
               />
-              @if (editor.index === null) {
+              <view class="flex-row flex-wrap gap-2">
+                @if (editor.index === null) {
+                  <nora-button
+                    text="Agregar y cargar otro"
+                    [disabled]="vm.busy()"
+                    (pressed)="confirmAndAddAnother()"
+                  />
+                } @else {
+                  <nora-button
+                    text="Eliminar"
+                    variant="danger"
+                    [disabled]="vm.busy()"
+                    (pressed)="vm.removeItem(editor.index)"
+                  />
+                }
                 <nora-button
-                  text="Agregar y cargar otro"
-                  (pressed)="vm.confirmItem(true)"
+                  text="Cancelar"
+                  variant="link"
+                  [disabled]="vm.busy()"
+                  (pressed)="vm.cancelItem()"
                 />
-              } @else {
-                <nora-button
-                  text="Eliminar"
-                  variant="danger"
-                  (pressed)="vm.removeItem(editor.index)"
-                />
-              }
-              <nora-button text="Cancelar" (pressed)="vm.cancelItem()" />
+              </view>
             } @else {
               @if (vm.preview().total !== null) {
                 <text class="section-title"
@@ -226,6 +248,15 @@ import { EstimatesCustomerPickerComponent } from "../components/estimates-custom
 })
 export class EstimatesPageComponent {
   protected readonly vm = inject(EstimatesPageService);
+  private readonly layout = viewChild(PageLayoutComponent);
+  protected formatRecoveryDate(instant: string): string {
+    return formatCalendarDate(calendarDateFromLocal(new Date(instant)));
+  }
+  protected confirmAndAddAnother(): void {
+    const count = this.vm.form().items.length;
+    this.vm.confirmItem(true);
+    if (this.vm.form().items.length > count) this.layout()?.scrollToStart();
+  }
   constructor() {
     this.vm.bindBack(inject(DestroyRef));
     void this.vm.enter();

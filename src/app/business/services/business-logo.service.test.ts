@@ -2,14 +2,21 @@ import { injectService } from "@ng-native/testing";
 import { beforeEach, expect, test, vi } from "vitest";
 import { BusinessLogoService } from "./business-logo.service";
 import { IdService } from "../../shared/services/id.service";
+import { pngBytes } from "../../shared/testing/logo-fixtures";
+const png = pngBytes();
 const native = vi.hoisted(() => ({
   pick: vi.fn(),
+  pending: vi.fn(),
+  bytes: vi.fn(),
   files: new Map<string, number>(),
   copyFails: false,
   deleted: vi.fn(),
   created: vi.fn(),
 }));
-vi.mock("expo-image-picker", () => ({ launchImageLibraryAsync: native.pick }));
+vi.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: native.pick,
+  getPendingResultAsync: native.pending,
+}));
 vi.mock("expo-file-system", () => {
   class Directory {
     readonly uri: string;
@@ -35,10 +42,14 @@ vi.mock("expo-file-system", () => {
     get size() {
       return native.files.get(this.uri) ?? 0;
     }
+    bytes() {
+      return native.bytes(this.uri);
+    }
     get parentDirectory() {
       return { uri: this.uri.slice(0, this.uri.lastIndexOf("/") + 1) };
     }
-    copy(target: File) {
+    async copy(target: File) {
+      await Promise.resolve();
       native.files.set(target.uri, this.size);
       if (native.copyFails) throw new Error("copia fallida");
     }
@@ -57,6 +68,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   native.files.clear();
   native.copyFails = false;
+  native.bytes.mockResolvedValue(png);
 });
 function setup() {
   return injectService(BusinessLogoService, {
@@ -94,7 +106,7 @@ test("rechaza imágenes no soportadas y archivos mayores a cinco MB", async () =
   await expect(service.pick()).rejects.toThrow("5 MB");
 });
 test("copia el logo al directorio durable y conserva el archivo original", async () => {
-  native.files.set(logo.uri, 100);
+  native.files.set(logo.uri, png.length);
   const saved = await setup().persist(logo);
   expect(saved.uri).toBe("file:///documents/business-logos/id.png");
   expect(native.files.has(logo.uri)).toBe(true);
@@ -102,7 +114,7 @@ test("copia el logo al directorio durable y conserva el archivo original", async
 });
 test("la limpieza sólo borra archivos de la carpeta propia de logos", async () => {
   const service = setup();
-  native.files.set(logo.uri, 100);
+  native.files.set(logo.uri, png.length);
   await service.removeOwned(logo);
   expect(native.deleted).not.toHaveBeenCalled();
   const saved = await service.persist(logo);
@@ -111,13 +123,27 @@ test("la limpieza sólo borra archivos de la carpeta propia de logos", async () 
   expect(native.files.has(logo.uri)).toBe(true);
 });
 test("una copia interrumpida elimina el archivo parcial y conserva el origen", async () => {
-  native.files.set(logo.uri, 100);
+  native.files.set(logo.uri, png.length);
   native.copyFails = true;
   await expect(setup().persist(logo)).rejects.toThrow("copia fallida");
   expect(native.files.has("file:///documents/business-logos/id.png")).toBe(
     false,
   );
   expect(native.files.has(logo.uri)).toBe(true);
+});
+test("rechaza bytes inválidos antes de guardar un logo que rompería el PDF", async () => {
+  native.files.set(logo.uri, 3);
+  native.bytes.mockResolvedValueOnce(Uint8Array.of(1, 2, 3));
+  await expect(setup().persist(logo)).rejects.toThrow(
+    "no se puede usar en el PDF",
+  );
+  expect(native.created).not.toHaveBeenCalled();
+  expect(native.files.has(logo.uri)).toBe(true);
+});
+test("recupera una selección que Android entregó tras recrear la Activity", async () => {
+  native.pending.mockResolvedValueOnce({ canceled: false, assets: [logo] });
+  expect(await setup().recoverPending()).toEqual(logo);
+  expect(native.created).not.toHaveBeenCalled();
 });
 test("no persiste archivos vacíos ni referencias temporales que ya no existen", async () => {
   await expect(setup().persist(logo)).rejects.toThrow("Volvé a elegirlo");

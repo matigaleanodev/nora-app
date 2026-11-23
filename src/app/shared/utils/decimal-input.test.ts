@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { parseMoneyInput, parseQuantityInput } from "./decimal-input";
+import { formatMoneyInput } from "./money-format";
 test.each([
   ["10,25", 1025],
   ["10.25", 1025],
@@ -8,6 +9,16 @@ test.each([
   [" 10,2 ", 1020],
 ])("convierte %s a %s centavos sin errores binarios", (text, cents) =>
   expect(parseMoneyInput(text)).toBe(cents),
+);
+test.each([
+  [Number.MAX_SAFE_INTEGER - 1, "90071992547409,90"],
+  [Number.MAX_SAFE_INTEGER, "90071992547409,91"],
+])(
+  "editar el precio de %i centavos conserva el valor exacto",
+  (cents, value) => {
+    expect(formatMoneyInput(cents)).toBe(value);
+    expect(parseMoneyInput(value)).toBe(cents);
+  },
 );
 test.each([
   "",

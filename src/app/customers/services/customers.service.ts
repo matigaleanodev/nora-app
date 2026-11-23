@@ -76,7 +76,7 @@ export class CustomersService {
       input.addresses.map(async (address) => {
         if (!address.name?.trim())
           throw new Error("Cada dirección necesita un nombre.");
-        if (address.id) assertUuid(address.id);
+        if (address.id !== undefined) assertUuid(address.id);
         return {
           ...address,
           id: address.id ?? (await this.ids.create()),

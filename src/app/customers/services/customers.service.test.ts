@@ -1,3 +1,4 @@
+import { createMemoryStorage } from "../../shared/testing/memory-storage";
 import { Injector } from "@angular/core";
 import { describe, expect, test, vi } from "vitest";
 import { CustomersService } from "./customers.service";
@@ -6,17 +7,7 @@ import { LocalStorageService } from "../../core/storage/local-storage.service";
 import { IdService } from "../../shared/services/id.service";
 
 function setup() {
-  const records = new Map<string, unknown>();
-  const storage = new LocalStorageService();
-  vi.spyOn(storage, "read").mockImplementation(
-    async <T>(key: string) =>
-      structuredClone(records.get(key) ?? null) as T | null,
-  );
-  const write = vi
-    .spyOn(storage, "write")
-    .mockImplementation(async <T>(key: string, value: T) => {
-      records.set(key, structuredClone(value));
-    });
+  const { storage, write } = createMemoryStorage();
   let count = 0;
   const injector = Injector.create({
     providers: [

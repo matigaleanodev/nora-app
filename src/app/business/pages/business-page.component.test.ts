@@ -6,12 +6,20 @@ import { BusinessPageService } from "../services/business-page.service";
 import { BusinessProfileService } from "../services/business-profile.service";
 import { BusinessLogoService } from "../services/business-logo.service";
 import { NotificationService } from "../../shared/services/notification.service";
-import type { BusinessForm } from "../models/business-profile.model";
-async function setup(failLoad = false) {
+import type {
+  BusinessForm,
+  BusinessLogo,
+  BusinessProfile,
+} from "../models/business-profile.model";
+async function setup(
+  failLoad = false,
+  profile: BusinessProfile | null = null,
+  recoveredLogo: BusinessLogo | null = null,
+) {
   const profiles = {
     get: failLoad
       ? vi.fn().mockRejectedValue(new Error("disco"))
-      : vi.fn().mockResolvedValue(null),
+      : vi.fn().mockResolvedValue(profile),
     save: vi.fn(async (form: BusinessForm) => ({
       displayName: form.displayName,
       email: form.email,
@@ -19,8 +27,14 @@ async function setup(failLoad = false) {
       updatedAt: "2026-10-09T00:00:00Z",
     })),
   };
-  const logos = { pick: vi.fn().mockResolvedValue(null) };
-  const notifications = { success: vi.fn(), danger: vi.fn() };
+  const logos = {
+    pick: vi.fn().mockResolvedValue(null),
+    recoverPending: vi
+      .fn()
+      .mockResolvedValueOnce(recoveredLogo)
+      .mockResolvedValue(null),
+  };
+  const notifications = { success: vi.fn(), danger: vi.fn(), warning: vi.fn() };
   const confirm = vi.fn().mockResolvedValue(true);
   let handler: (() => boolean) | undefined;
   const unsubscribe = vi.fn();
@@ -104,6 +118,36 @@ test("cancelar la galería conserva el logo y elegir uno no lo persiste antes de
   expect(profiles.save).not.toHaveBeenCalled();
   await userEvent.press(screen.getByRole("button", { name: "Quitar logo" }));
   expect(page.form().logo).toBeUndefined();
+});
+test("recupera el logo pendiente como edición sin guardar y permite descartarla", async () => {
+  const savedLogo: BusinessLogo = {
+    uri: "file:///documents/logo.png",
+    mimeType: "image/png",
+  };
+  const pending: BusinessLogo = {
+    uri: "file:///cache/logo.jpg",
+    mimeType: "image/jpeg",
+  };
+  const { profiles, page, confirm } = await setup(
+    false,
+    {
+      displayName: "Juan Pérez",
+      logo: savedLogo,
+      updatedAt: "2026-10-09T00:00:00Z",
+    },
+    pending,
+  );
+  expect(page.form()).toMatchObject({
+    displayName: "Juan Pérez",
+    logo: pending,
+  });
+  expect(page.dirty()).toBe(true);
+  expect(profiles.save).not.toHaveBeenCalled();
+  await page.close();
+  expect(confirm).toHaveBeenCalledOnce();
+  await page.open();
+  expect(page.form().logo).toEqual(savedLogo);
+  expect(page.dirty()).toBe(false);
 });
 test("volver por Android respeta la confirmación y libera el listener al destruir", async () => {
   const { page, confirm, back, result, unsubscribe } = await setup();

@@ -11,16 +11,10 @@ export const BUSINESS_PROFILE_KEY = "business-profile.v1";
 export class BusinessProfileService {
   private readonly storage = inject(LocalStorageService);
   private readonly logos = inject(BusinessLogoService);
-  private queue: Promise<unknown> = Promise.resolve();
   get(): Promise<BusinessProfile | null> {
     return this.storage.read<BusinessProfile>(BUSINESS_PROFILE_KEY);
   }
-  save(form: BusinessForm): Promise<BusinessProfile> {
-    const operation = this.queue.then(() => this.persist(form));
-    this.queue = operation.catch(() => undefined);
-    return operation;
-  }
-  private async persist(form: BusinessForm): Promise<BusinessProfile> {
+  async save(form: BusinessForm): Promise<BusinessProfile> {
     const displayName = form.displayName.trim();
     const email = form.email.trim();
     if (!displayName) throw new Error("Ingresá tu nombre o nombre comercial.");
@@ -38,29 +32,35 @@ export class BusinessProfileService {
       throw new Error(
         "Ingresá código de área sin 0 y número sin 15: diez dígitos en total.",
       );
-    const previous = await this.get();
     let copied: BusinessLogo | undefined;
+    let oldLogo: BusinessLogo | undefined;
+    let saved!: BusinessProfile;
     try {
-      const logo =
-        form.logo && form.logo.uri !== previous?.logo?.uri
-          ? (copied = await this.logos.persist(form.logo))
-          : form.logo;
-      const saved: BusinessProfile = {
-        displayName,
-        email: email || undefined,
-        phone: areaCode
-          ? { areaCode, number, whatsapp: form.whatsapp }
-          : undefined,
-        logo,
-        updatedAt: new Date().toISOString(),
-      };
-      await this.storage.write(BUSINESS_PROFILE_KEY, saved);
-      if (previous?.logo?.uri !== saved.logo?.uri)
-        await this.logos.removeOwned(previous?.logo);
-      return saved;
+      await this.storage.update<BusinessProfile>(
+        BUSINESS_PROFILE_KEY,
+        async (previous) => {
+          oldLogo = previous?.logo;
+          const logo =
+            form.logo && form.logo.uri !== oldLogo?.uri
+              ? (copied = await this.logos.persist(form.logo))
+              : form.logo;
+          saved = {
+            displayName,
+            email: email || undefined,
+            phone: areaCode
+              ? { areaCode, number, whatsapp: form.whatsapp }
+              : undefined,
+            logo,
+            updatedAt: new Date().toISOString(),
+          };
+          return saved;
+        },
+      );
     } catch (error) {
       await this.logos.removeOwned(copied);
       throw error;
     }
+    if (oldLogo?.uri !== saved.logo?.uri) await this.logos.removeOwned(oldLogo);
+    return saved;
   }
 }

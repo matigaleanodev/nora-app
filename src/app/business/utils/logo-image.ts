@@ -1,5 +1,5 @@
 /**
- * Validación de los bytes de un logo importado. La comprobación estructural (síncrona) verifica la forma
+ * Validación de los bytes de un logo. La comprobación estructural (síncrona) verifica la forma
  * del formato declarado; `isUsableLogo` además lo decodifica, de modo que un Base64 válido pero ajeno (por
  * ejemplo `AAAA` como PNG) o una imagen sin datos no llegue a reemplazar el logo ni al PDF.
  */
